@@ -6,7 +6,7 @@ async function main() {
   const env = loadEnv();
   const app = createApp(env);
 
-  app.listen(env.PORT, () => {
+  app.listen(env.PORT, '0.0.0.0', () => {
     console.log(`Game Release Calendar escuchando en el puerto ${env.PORT}`);
     console.log(`Entorno: ${env.NODE_ENV}`);
   });

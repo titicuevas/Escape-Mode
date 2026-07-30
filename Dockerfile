@@ -1,7 +1,11 @@
 # syntax=docker/dockerfile:1
 
 FROM node:20-bookworm-slim AS base
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable \
+  && corepack prepare pnpm@9.15.0 --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -22,7 +26,11 @@ RUN pnpm prisma:generate \
 
 FROM node:20-bookworm-slim AS runner
 ENV NODE_ENV=production
-RUN corepack enable && corepack prepare pnpm@9.15.0 --activate \
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends openssl ca-certificates \
+  && rm -rf /var/lib/apt/lists/* \
+  && corepack enable \
+  && corepack prepare pnpm@9.15.0 --activate \
   && groupadd --system --gid 1001 grc \
   && useradd --system --uid 1001 --gid grc grc
 WORKDIR /app
@@ -38,6 +46,8 @@ COPY --from=build --chown=grc:grc /app/client/package.json ./client/package.json
 COPY --from=build --chown=grc:grc /app/client/dist ./client/dist
 COPY --from=build --chown=grc:grc /app/client/node_modules ./client/node_modules
 COPY --from=build --chown=grc:grc /app/scripts/docker-entrypoint.sh ./scripts/docker-entrypoint.sh
+
+RUN chmod +x ./scripts/docker-entrypoint.sh
 
 USER grc
 EXPOSE 3000

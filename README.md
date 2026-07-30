@@ -167,7 +167,7 @@ docker build -t game-release-calendar .
 docker run --env-file .env -p 3000:3000 game-release-calendar
 ```
 
-Las migraciones **no** se ejecutan automáticamente al arrancar. Usa `pnpm prisma:deploy` por separado.
+Las migraciones se ejecutan automáticamente al arrancar el contenedor (`scripts/docker-entrypoint.sh`).
 
 ## Railway
 
