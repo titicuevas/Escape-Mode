@@ -12,7 +12,8 @@
   --color-danger: #f87171;
   --color-warning: #fbbf24;
   --color-success: #34d399;
-  --font-sans: "Segoe UI", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "IBM Plex Sans", "Noto Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-display: "Syne", "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
 }
 
 html,
