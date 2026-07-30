@@ -35,20 +35,6 @@ export const platformFamilyEnum = z.enum([
 export type PlatformFamily = z.infer<typeof platformFamilyEnum>;
 export type MediaFormat = z.infer<typeof mediaFormatEnum>;
 
-/** Tiendas habituales; «Otra» permite texto libre en el formulario */
-export const STORE_OPTIONS = [
-  'PlayStation Store',
-  'Xbox Store',
-  'Nintendo eShop',
-  'Steam',
-  'Amazon',
-  'GAME',
-  'Instant Gaming',
-  'Cdkeys',
-  'MediaMarkt',
-  'Otra',
-] as const;
-
 /** '' → undefined; permite null explícito para limpiar campos */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 

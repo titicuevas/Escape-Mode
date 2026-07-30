@@ -12,16 +12,21 @@ export const paymentTypeEnum = z.enum(['RESERVATION', 'PAYMENT', 'REFUND']);
 export const budgetGroupingEnum = z.enum(['RELEASE', 'RESERVATION', 'PAYMENT']);
 
 export const SUGGESTED_STORES = [
-  'Amazon',
-  'GAME',
-  'Fnac',
-  'MediaMarkt',
   'PlayStation Store',
   'Xbox Store',
   'Nintendo eShop',
   'Steam',
+  'Amazon',
+  'GAME',
+  'Instant Gaming',
+  'Cdkeys',
+  'MediaMarkt',
+  'Fnac',
   'Otra',
 ] as const;
+
+/** Alias usado en formularios de juego */
+export const STORE_OPTIONS = SUGGESTED_STORES;
 
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
 
