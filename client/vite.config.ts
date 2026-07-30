@@ -47,7 +47,9 @@ export default defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2,webmanifest}'],
         runtimeCaching: [
           {
-            urlPattern: ({ url }) =>
+            urlPattern: ({ url, request }) =>
+              request.method === 'GET' &&
+              url.origin === self.location.origin &&
               url.pathname.startsWith('/api/') &&
               !url.pathname.startsWith('/api/auth') &&
               (url.pathname.startsWith('/api/games') ||
@@ -66,10 +68,11 @@ export default defineConfig({
                 statuses: [0, 200],
               },
             },
-            method: 'GET',
           },
           {
-            urlPattern: ({ request }) => request.destination === 'image',
+            // Solo imágenes del mismo origen; las de RAWG no deben pasar por el SW
+            urlPattern: ({ url, request }) =>
+              request.destination === 'image' && url.origin === self.location.origin,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'grc-images',

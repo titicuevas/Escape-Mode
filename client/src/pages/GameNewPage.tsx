@@ -6,6 +6,7 @@ import { GameForm } from '../features/games/GameForm';
 import { api, ApiError } from '../api/client';
 import type { RawgGameCard } from '../types/rawg';
 import { formatDateEs } from '../utils/format';
+import { CoverImage } from '../components/CoverImage';
 
 function cardToDefaults(card: RawgGameCard, detail?: RawgGameCard): Partial<GameCreateInput> {
   const source = detail ?? card;
@@ -132,9 +133,7 @@ export function GameNewPage() {
                   onClick={() => void applyCard(item)}
                 >
                   <div className="h-12 w-9 shrink-0 overflow-hidden rounded bg-surface">
-                    {item.coverUrl ? (
-                      <img src={item.coverUrl} alt="" className="h-full w-full object-cover" />
-                    ) : null}
+                    <CoverImage src={item.coverUrl} alt="" className="h-full w-full object-cover" />
                   </div>
                   <div className="min-w-0">
                     <p className="truncate text-sm font-medium">{item.title}</p>

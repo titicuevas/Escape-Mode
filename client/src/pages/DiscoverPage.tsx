@@ -16,6 +16,7 @@ import { formatDateEs } from '../utils/format';
 import type { DiscoveryDecision, RawgGameCard } from '../types/rawg';
 import { usePreferences } from '../providers/PreferencesProvider';
 import { useOnline } from '../components/OfflineBanner';
+import { CoverImage } from '../components/CoverImage';
 
 const FILTERS_KEY = 'grc.discover.filters';
 
@@ -381,20 +382,14 @@ export function DiscoverPage() {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
-            <div className="relative aspect-[3/4] bg-surface">
-              {current.coverUrl || current.backgroundUrl ? (
-                <img
-                  src={current.coverUrl || current.backgroundUrl || ''}
-                  alt={`Portada de ${current.title}`}
-                  className="h-full w-full object-cover"
-                  draggable={false}
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center text-ink-muted">Sin imagen</div>
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent p-4 pt-16">
-                <h3 className="text-xl font-semibold">{current.title}</h3>
-                <p className="mt-1 text-sm text-white/80">{formatDateEs(current.releaseDate)}</p>
+            <div className="relative aspect-[3/4] overflow-hidden bg-surface">
+              <CoverImage
+                src={current.coverUrl || current.backgroundUrl}
+                alt={`Portada de ${current.title}`}
+              />
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pt-20">
+                <h3 className="text-xl font-semibold drop-shadow">{current.title}</h3>
+                <p className="mt-1 text-sm text-white/85">{formatDateEs(current.releaseDate)}</p>
               </div>
             </div>
             <div className="space-y-2 p-4 text-sm">

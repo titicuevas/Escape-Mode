@@ -135,7 +135,7 @@ export const gamesQuerySchema = z.object({
   sort: z.enum(['date', 'title', 'updated']).default('date'),
   order: z.enum(['asc', 'desc']).default('asc'),
   page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(24),
+  pageSize: z.coerce.number().int().positive().max(200).default(24),
 });
 
 export type GameCreateInput = z.infer<typeof gameCreateSchema>;

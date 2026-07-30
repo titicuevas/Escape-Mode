@@ -193,10 +193,9 @@ Railway inyecta `PORT` automáticamente.
 
 ### 3. Migraciones y seed
 
-Tras conectar PostgreSQL y **antes del primer uso**, ejecuta en el servicio (shell / one-off):
+Las migraciones corren al arrancar el contenedor. Tras el primer deploy exitoso, ejecuta el seed una vez en la **Console** del servicio Escape-Mode:
 
 ```bash
-pnpm prisma:deploy
 pnpm prisma:seed
 ```
 

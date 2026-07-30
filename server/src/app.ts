@@ -50,7 +50,8 @@ export function createApp(env: Env) {
             }
           : false,
       crossOriginEmbedderPolicy: false,
-      referrerPolicy: { policy: 'no-referrer' },
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     }),
   );
 
