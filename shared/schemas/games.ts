@@ -21,6 +21,8 @@ export const purchaseStatusEnum = z.enum([
 
 export const dateSourceEnum = z.enum(['RAWG', 'MANUAL', 'OFFICIAL', 'UNKNOWN']);
 
+export const mediaFormatEnum = z.enum(['PHYSICAL', 'DIGITAL', 'UNKNOWN']);
+
 export const platformFamilyEnum = z.enum([
   'PLAYSTATION_5',
   'XBOX_SERIES',
@@ -31,6 +33,21 @@ export const platformFamilyEnum = z.enum([
 ]);
 
 export type PlatformFamily = z.infer<typeof platformFamilyEnum>;
+export type MediaFormat = z.infer<typeof mediaFormatEnum>;
+
+/** Tiendas habituales; «Otra» permite texto libre en el formulario */
+export const STORE_OPTIONS = [
+  'PlayStation Store',
+  'Xbox Store',
+  'Nintendo eShop',
+  'Steam',
+  'Amazon',
+  'GAME',
+  'Instant Gaming',
+  'Cdkeys',
+  'MediaMarkt',
+  'Otra',
+] as const;
 
 /** '' → undefined; permite null explícito para limpiar campos */
 const emptyToUndefined = (v: unknown) => (v === '' ? undefined : v);
@@ -85,6 +102,7 @@ export const gameCreateSchema = z.object({
   selectedPlatform: z.string().max(100).optional().nullable(),
   selectedEdition: z.string().max(100).optional().nullable(),
   selectedStore: z.string().max(100).optional().nullable(),
+  mediaFormat: mediaFormatEnum.default('UNKNOWN'),
   totalPrice: optionalMoney,
   targetPrice: optionalMoney,
   amountPaid: optionalMoney,

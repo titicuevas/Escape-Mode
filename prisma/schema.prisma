@@ -73,6 +73,12 @@ enum BudgetGrouping {
   PAYMENT
 }
 
+enum MediaFormat {
+  PHYSICAL
+  DIGITAL
+  UNKNOWN
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -127,6 +133,7 @@ model Game {
   selectedPlatform         String?
   selectedEdition          String?
   selectedStore            String?
+  mediaFormat              MediaFormat    @default(UNKNOWN)
   totalPrice               Decimal?       @db.Decimal(10, 2)
   amountPaid               Decimal        @default(0) @db.Decimal(10, 2)
   targetPrice              Decimal?       @db.Decimal(10, 2)

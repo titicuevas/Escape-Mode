@@ -51,6 +51,12 @@ export const discoveryDecisionLabels = {
   MUST_BUY: 'Compra segura',
 } as const;
 
+export const mediaFormatLabels = {
+  PHYSICAL: 'Físico',
+  DIGITAL: 'Digital',
+  UNKNOWN: 'Sin especificar',
+} as const;
+
 export const platformFamilyLabels = {
   PLAYSTATION_5: 'PlayStation 5',
   XBOX_SERIES: 'Xbox Series',

@@ -10,6 +10,7 @@ export type PurchaseStatus =
   | 'PLAYING'
   | 'COMPLETED';
 export type DateSource = 'RAWG' | 'MANUAL' | 'OFFICIAL' | 'UNKNOWN';
+export type MediaFormat = 'PHYSICAL' | 'DIGITAL' | 'UNKNOWN';
 export type PlatformFamily =
   | 'PLAYSTATION_5'
   | 'XBOX_SERIES'
@@ -44,6 +45,7 @@ export interface Game {
   selectedPlatform: string | null;
   selectedEdition: string | null;
   selectedStore: string | null;
+  mediaFormat: MediaFormat;
   totalPrice: string | null;
   amountPaid: string;
   targetPrice: string | null;

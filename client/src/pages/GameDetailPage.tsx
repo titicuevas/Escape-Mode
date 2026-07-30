@@ -5,7 +5,9 @@ import { PageSkeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { GameFinancePanels } from '../features/games/GameFinancePanels';
 import { formatDateEs, formatEuro } from '../utils/format';
+import { mediaFormatLabels } from '@grc/shared';
 import { useState } from 'react';
+import { CoverImage } from '../components/CoverImage';
 
 export function GameDetailPage() {
   const { id = '' } = useParams();
@@ -81,13 +83,9 @@ export function GameDetailPage() {
 
       <div className="grid gap-6 lg:grid-cols-[200px_1fr] xl:grid-cols-[220px_1fr]">
         <div className="mx-auto w-40 overflow-hidden rounded-xl border border-white/10 bg-surface-elevated sm:w-48 lg:mx-0 lg:w-full">
-          {game.coverUrl ? (
-            <img src={game.coverUrl} alt={`Portada de ${game.title}`} className="w-full object-cover" />
-          ) : (
-            <div className="flex aspect-[3/4] items-center justify-center text-sm text-ink-muted">
-              Sin portada
-            </div>
-          )}
+          <div className="aspect-[3/4]">
+            <CoverImage src={game.coverUrl} alt={`Portada de ${game.title}`} />
+          </div>
         </div>
 
         <div className="space-y-4 text-sm">
@@ -105,12 +103,31 @@ export function GameDetailPage() {
               <dd>{game.selectedPlatform || game.platforms.join(', ') || '—'}</dd>
             </div>
             <div>
+              <dt className="text-ink-muted">Formato</dt>
+              <dd>{mediaFormatLabels[game.mediaFormat] ?? 'Sin especificar'}</dd>
+            </div>
+            <div>
               <dt className="text-ink-muted">Edición</dt>
               <dd>{game.selectedEdition || '—'}</dd>
             </div>
             <div>
               <dt className="text-ink-muted">Tienda</dt>
-              <dd>{game.selectedStore || '—'}</dd>
+              <dd>
+                {game.selectedStore || '—'}
+                {game.purchaseUrl ? (
+                  <>
+                    {' · '}
+                    <a
+                      href={game.purchaseUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-accent underline"
+                    >
+                      Enlace
+                    </a>
+                  </>
+                ) : null}
+              </dd>
             </div>
             <div>
               <dt className="text-ink-muted">Precio total</dt>

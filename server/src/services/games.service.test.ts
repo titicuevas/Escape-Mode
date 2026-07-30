@@ -30,6 +30,7 @@ function fakeGame(partial: Partial<Game> & Pick<Game, 'title'>): Game {
     selectedPlatform: null,
     selectedEdition: null,
     selectedStore: null,
+    mediaFormat: 'UNKNOWN',
     totalPrice: null,
     amountPaid: new Decimal(0),
     targetPrice: null,

@@ -3,7 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import {
   gameCreateSchema,
   interestStatusLabels,
+  mediaFormatLabels,
   purchaseStatusLabels,
+  STORE_OPTIONS,
   type GameCreateInput,
 } from '@grc/shared';
 import type { Game } from '../../types/game';
@@ -14,6 +16,14 @@ const interestOptions = Object.entries(interestStatusLabels) as Array<
 const purchaseOptions = Object.entries(purchaseStatusLabels) as Array<
   [GameCreateInput['purchaseStatus'], string]
 >;
+const mediaFormatOptions = Object.entries(mediaFormatLabels) as Array<
+  [NonNullable<GameCreateInput['mediaFormat']>, string]
+>;
+
+function resolveStoreSelect(store: string | null | undefined): string {
+  if (!store) return '';
+  return (STORE_OPTIONS as readonly string[]).includes(store) ? store : 'Otra';
+}
 
 function gameToFormValues(game?: Game): GameCreateInput {
   if (!game) {
@@ -25,6 +35,7 @@ function gameToFormValues(game?: Game): GameCreateInput {
       dateSource: 'MANUAL',
       interestStatus: 'THINKING',
       purchaseStatus: 'UNRESERVED',
+      mediaFormat: 'UNKNOWN',
       includesBonus: false,
       useEarlyAccessAsMainDate: false,
     };
@@ -54,6 +65,7 @@ function gameToFormValues(game?: Game): GameCreateInput {
     selectedPlatform: game.selectedPlatform,
     selectedEdition: game.selectedEdition,
     selectedStore: game.selectedStore,
+    mediaFormat: game.mediaFormat ?? 'UNKNOWN',
     totalPrice: game.totalPrice ? Number(game.totalPrice) : undefined,
     targetPrice: game.targetPrice ? Number(game.targetPrice) : undefined,
     amountPaid: game.amountPaid ? Number(game.amountPaid) : undefined,
@@ -91,6 +103,9 @@ export function GameForm({
   });
 
   const includesBonus = watch('includesBonus');
+  const selectedStore = watch('selectedStore') ?? '';
+  const storeSelect = resolveStoreSelect(selectedStore);
+  const showCustomStore = storeSelect === 'Otra';
 
   return (
     <form
@@ -277,14 +292,56 @@ export function GameForm({
         </div>
 
         <div>
-          <label htmlFor="selectedStore" className="mb-1.5 block text-sm">
+          <label htmlFor="mediaFormat" className="mb-1.5 block text-sm">
+            Formato
+          </label>
+          <select
+            id="mediaFormat"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
+            {...register('mediaFormat')}
+          >
+            {mediaFormatOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div>
+          <label htmlFor="selectedStoreSelect" className="mb-1.5 block text-sm">
             Tienda
           </label>
-          <input
-            id="selectedStore"
+          <select
+            id="selectedStoreSelect"
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
-            {...register('selectedStore')}
-          />
+            value={storeSelect}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value === 'Otra') {
+                setValue('selectedStore', selectedStore && storeSelect === 'Otra' ? selectedStore : '');
+              } else if (value === '') {
+                setValue('selectedStore', null);
+              } else {
+                setValue('selectedStore', value);
+              }
+            }}
+          >
+            <option value="">Sin especificar</option>
+            {STORE_OPTIONS.map((store) => (
+              <option key={store} value={store}>
+                {store}
+              </option>
+            ))}
+          </select>
+          {showCustomStore ? (
+            <input
+              id="selectedStore"
+              className="mt-2 w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
+              placeholder="Nombre de la tienda"
+              {...register('selectedStore')}
+            />
+          ) : null}
         </div>
 
         <div>

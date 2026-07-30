@@ -71,6 +71,7 @@ function mapCreateData(userId: string, input: GameCreateInput): Prisma.GameCreat
     selectedPlatform: input.selectedPlatform ?? undefined,
     selectedEdition: input.selectedEdition ?? undefined,
     selectedStore: input.selectedStore ?? undefined,
+    mediaFormat: input.mediaFormat,
     totalPrice: decimalFrom(input.totalPrice ?? null) ?? undefined,
     targetPrice: decimalFrom(input.targetPrice ?? null) ?? undefined,
     amountPaid: decimalFrom(input.amountPaid ?? 0) ?? undefined,
@@ -118,6 +119,7 @@ function mapUpdateData(input: GameUpdateInput): Prisma.GameUpdateInput {
   if (input.selectedPlatform !== undefined) data.selectedPlatform = input.selectedPlatform;
   if (input.selectedEdition !== undefined) data.selectedEdition = input.selectedEdition;
   if (input.selectedStore !== undefined) data.selectedStore = input.selectedStore;
+  if (input.mediaFormat !== undefined) data.mediaFormat = input.mediaFormat;
   if (input.totalPrice !== undefined) {
     data.totalPrice = input.totalPrice === null ? null : decimalFrom(input.totalPrice);
   }

@@ -9,6 +9,8 @@ import {
   PurchaseStatus,
   DateSource,
   PaymentType,
+  MediaFormat,
+  Prisma,
 } from '@prisma/client';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -52,6 +54,28 @@ async function seedAdmin() {
   return user;
 }
 
+type SampleGame = {
+  title: string;
+  selectedPlatform: string;
+  normalizedPlatforms: PlatformFamily[];
+  platforms: string[];
+  releaseDate?: Date;
+  earlyAccessDate?: Date;
+  selectedEdition?: string;
+  interestStatus: InterestStatus;
+  purchaseStatus: PurchaseStatus;
+  dateSource: DateSource;
+  mediaFormat: MediaFormat;
+  selectedStore: string;
+  totalPrice: number;
+  amountPaid?: number;
+  purchaseUrl?: string;
+  includesBonus?: boolean;
+  bonusDescription?: string;
+  useEarlyAccessAsMainDate?: boolean;
+  notes: string;
+};
+
 async function seedDevGames(userId: string) {
   // En desarrollo se cargan por defecto; en producción solo con SEED_DEV_GAMES=true
   const shouldSeed =
@@ -59,11 +83,11 @@ async function seedDevGames(userId: string) {
     (process.env.SEED_DEV_GAMES !== 'false' && process.env.NODE_ENV !== 'production');
 
   if (!shouldSeed) {
-    console.log('Seed de juegos de ejemplo omitido.');
+    console.log('Seed de juegos de ejemplo omitido (pon SEED_DEV_GAMES=true para forzar).');
     return;
   }
 
-  const samples = [
+  const samples: SampleGame[] = [
     {
       title: 'Marvel Tōkon: Fighting Souls',
       selectedPlatform: 'PlayStation 5',
@@ -73,7 +97,11 @@ async function seedDevGames(userId: string) {
       interestStatus: InterestStatus.MUST_BUY,
       purchaseStatus: PurchaseStatus.RESERVED,
       dateSource: DateSource.MANUAL,
-      notes: 'Dato manual de desarrollo. Precio pendiente.',
+      mediaFormat: MediaFormat.PHYSICAL,
+      selectedStore: 'Amazon',
+      totalPrice: 59.9,
+      purchaseUrl: 'https://www.amazon.es/dp/B0GP25C41K',
+      notes: 'Reserva Amazon. Físico.',
     },
     {
       title: "Marvel's Wolverine",
@@ -87,8 +115,12 @@ async function seedDevGames(userId: string) {
       includesBonus: true,
       bonusDescription: 'Steelbook',
       dateSource: DateSource.MANUAL,
+      mediaFormat: MediaFormat.PHYSICAL,
+      selectedStore: 'GAME',
+      totalPrice: 79.99,
       amountPaid: 3,
-      notes: 'Dato manual de desarrollo. Precio total desconocido.',
+      purchaseUrl: 'https://www.game.es/videojuegos/accion/playstation-5/marvel-lobezno/253892',
+      notes: 'Reserva GAME con Steelbook. 3 € pagados.',
     },
     {
       title: 'EA Sports FC 27',
@@ -98,10 +130,13 @@ async function seedDevGames(userId: string) {
       earlyAccessDate: new Date('2026-09-18'),
       selectedEdition: 'Ultimate',
       interestStatus: InterestStatus.MUST_BUY,
-      purchaseStatus: PurchaseStatus.PAID,
+      purchaseStatus: PurchaseStatus.RESERVED,
       useEarlyAccessAsMainDate: true,
       dateSource: DateSource.MANUAL,
-      notes: 'Dato manual de desarrollo. Precio total pendiente.',
+      mediaFormat: MediaFormat.DIGITAL,
+      selectedStore: 'PlayStation Store',
+      totalPrice: 100,
+      notes: 'Edición Ultimate digital en PSN. Acceso anticipado.',
     },
     {
       title: 'Grand Theft Auto VI',
@@ -112,26 +147,68 @@ async function seedDevGames(userId: string) {
       interestStatus: InterestStatus.MUST_BUY,
       purchaseStatus: PurchaseStatus.PAID,
       dateSource: DateSource.MANUAL,
-      notes: 'Dato manual de desarrollo. Precio total pendiente.',
+      mediaFormat: MediaFormat.DIGITAL,
+      selectedStore: 'PlayStation Store',
+      totalPrice: 100,
+      amountPaid: 100,
+      notes: 'Digital PSN. Pagado.',
     },
-  ] as const;
+  ];
 
   for (const sample of samples) {
     const existing = await prisma.game.findFirst({
       where: { userId, title: sample.title },
     });
 
+    const data: Prisma.GameUncheckedCreateInput = {
+      userId,
+      title: sample.title,
+      selectedPlatform: sample.selectedPlatform,
+      normalizedPlatforms: sample.normalizedPlatforms,
+      platforms: sample.platforms,
+      releaseDate: sample.releaseDate,
+      earlyAccessDate: sample.earlyAccessDate,
+      selectedEdition: sample.selectedEdition,
+      interestStatus: sample.interestStatus,
+      purchaseStatus: sample.purchaseStatus,
+      dateSource: sample.dateSource,
+      mediaFormat: sample.mediaFormat,
+      selectedStore: sample.selectedStore,
+      totalPrice: sample.totalPrice,
+      amountPaid: sample.amountPaid ?? 0,
+      purchaseUrl: sample.purchaseUrl,
+      includesBonus: sample.includesBonus ?? false,
+      bonusDescription: sample.bonusDescription,
+      useEarlyAccessAsMainDate: sample.useEarlyAccessAsMainDate ?? false,
+      notes: sample.notes,
+    };
+
     if (existing) {
-      console.log(`Juego de ejemplo ya existe: ${sample.title}`);
+      await prisma.game.update({
+        where: { id: existing.id },
+        data: {
+          selectedPlatform: data.selectedPlatform,
+          selectedEdition: data.selectedEdition,
+          interestStatus: data.interestStatus,
+          purchaseStatus: data.purchaseStatus,
+          mediaFormat: data.mediaFormat,
+          selectedStore: data.selectedStore,
+          totalPrice: data.totalPrice,
+          amountPaid: data.amountPaid,
+          purchaseUrl: data.purchaseUrl,
+          includesBonus: data.includesBonus,
+          bonusDescription: data.bonusDescription,
+          useEarlyAccessAsMainDate: data.useEarlyAccessAsMainDate,
+          notes: data.notes,
+          releaseDate: data.releaseDate,
+          earlyAccessDate: data.earlyAccessDate,
+        },
+      });
+      console.log(`Juego de ejemplo actualizado: ${sample.title}`);
       continue;
     }
 
-    const game = await prisma.game.create({
-      data: {
-        userId,
-        ...sample,
-      },
-    });
+    const game = await prisma.game.create({ data });
 
     if (sample.title === "Marvel's Wolverine") {
       await prisma.paymentHistory.create({
@@ -140,7 +217,19 @@ async function seedDevGames(userId: string) {
           amount: 3,
           paymentDate: new Date(),
           paymentType: PaymentType.RESERVATION,
-          notes: 'Reserva inicial (dato de desarrollo)',
+          notes: 'Reserva inicial GAME',
+        },
+      });
+    }
+
+    if (sample.title === 'Grand Theft Auto VI') {
+      await prisma.paymentHistory.create({
+        data: {
+          gameId: game.id,
+          amount: 100,
+          paymentDate: new Date(),
+          paymentType: PaymentType.PAYMENT,
+          notes: 'Pago PSN',
         },
       });
     }
