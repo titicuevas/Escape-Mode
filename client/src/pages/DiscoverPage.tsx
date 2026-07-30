@@ -552,7 +552,7 @@ export function DiscoverPage() {
             ) : null}
 
             <div
-              className="relative aspect-[3/4] max-h-[min(52dvh,26rem)] touch-none overflow-hidden bg-surface sm:max-h-none"
+              className="relative flex max-h-[min(42dvh,22rem)] min-h-[14rem] touch-none items-center justify-center overflow-hidden bg-surface sm:max-h-[26rem] sm:min-h-[18rem]"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -561,8 +561,9 @@ export function DiscoverPage() {
               <CoverImage
                 src={current.coverUrl || current.backgroundUrl}
                 alt={`Portada de ${current.title}`}
+                className="max-h-[min(42dvh,22rem)] w-full object-contain sm:max-h-[26rem]"
               />
-              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-4 pt-20">
+              <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/90 via-black/45 to-transparent p-4 pt-16">
                 <h3 className="text-xl font-semibold drop-shadow">{current.title}</h3>
                 <p className="mt-1 text-sm text-white/85">{formatDateEs(current.releaseDate)}</p>
               </div>
