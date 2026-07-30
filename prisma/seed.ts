@@ -74,7 +74,45 @@ type SampleGame = {
   bonusDescription?: string;
   useEarlyAccessAsMainDate?: boolean;
   notes: string;
+  searchQuery?: string;
+  coverUrl?: string;
 };
+
+async function fetchRawgCover(title: string, searchQuery?: string): Promise<{
+  rawgId: number;
+  slug: string | null;
+  coverUrl: string;
+} | null> {
+  const key = process.env.RAWG_API_KEY?.trim();
+  if (!key || key === 'local-dev-placeholder') return null;
+
+  const query = searchQuery || title;
+  const url = new URL('https://api.rawg.io/api/games');
+  url.searchParams.set('key', key);
+  url.searchParams.set('search', query);
+  url.searchParams.set('page_size', '5');
+
+  try {
+    const res = await fetch(url);
+    if (!res.ok) return null;
+    const data = (await res.json()) as {
+      results?: Array<{ id: number; name: string; slug?: string; background_image?: string | null }>;
+    };
+    const results = data.results ?? [];
+    const exact =
+      results.find((r) => r.name.toLowerCase() === title.toLowerCase()) ??
+      results.find((r) => r.background_image) ??
+      results[0];
+    if (!exact?.background_image) return null;
+    return {
+      rawgId: exact.id,
+      slug: exact.slug ?? null,
+      coverUrl: exact.background_image,
+    };
+  } catch {
+    return null;
+  }
+}
 
 async function seedDevGames(userId: string) {
   // En desarrollo se cargan por defecto; en producción solo con SEED_DEV_GAMES=true
@@ -90,21 +128,25 @@ async function seedDevGames(userId: string) {
   const samples: SampleGame[] = [
     {
       title: 'Marvel Tōkon: Fighting Souls',
+      searchQuery: 'Marvel Tokon Fighting Souls',
       selectedPlatform: 'PlayStation 5',
       normalizedPlatforms: [PlatformFamily.PLAYSTATION_5],
       platforms: ['PlayStation 5'],
       releaseDate: new Date('2026-08-06'),
       interestStatus: InterestStatus.MUST_BUY,
       purchaseStatus: PurchaseStatus.RESERVED,
-      dateSource: DateSource.MANUAL,
+      dateSource: DateSource.OFFICIAL,
       mediaFormat: MediaFormat.PHYSICAL,
       selectedStore: 'Amazon',
       totalPrice: 59.9,
       purchaseUrl: 'https://www.amazon.es/dp/B0GP25C41K',
+      coverUrl:
+        'https://media.rawg.io/media/resize/1280/-/screenshots/4ba/4ba7897954c31431c9b38cf18b9e9fdf.jpeg',
       notes: 'Reserva Amazon. Físico.',
     },
     {
       title: "Marvel's Wolverine",
+      searchQuery: "Marvel's Wolverine",
       selectedPlatform: 'PlayStation 5',
       normalizedPlatforms: [PlatformFamily.PLAYSTATION_5],
       platforms: ['PlayStation 5'],
@@ -114,16 +156,19 @@ async function seedDevGames(userId: string) {
       purchaseStatus: PurchaseStatus.PARTIALLY_PAID,
       includesBonus: true,
       bonusDescription: 'Steelbook',
-      dateSource: DateSource.MANUAL,
+      dateSource: DateSource.OFFICIAL,
       mediaFormat: MediaFormat.PHYSICAL,
       selectedStore: 'GAME',
       totalPrice: 79.99,
       amountPaid: 3,
       purchaseUrl: 'https://www.game.es/videojuegos/accion/playstation-5/marvel-lobezno/253892',
+      coverUrl:
+        'https://media.rawg.io/media/resize/1280/-/games/28d/28d61be51ec0411e24c28f71122dcaaf.jpeg',
       notes: 'Reserva GAME con Steelbook. 3 € pagados.',
     },
     {
       title: 'EA Sports FC 27',
+      searchQuery: 'EA Sports FC 26',
       selectedPlatform: 'PlayStation 5',
       normalizedPlatforms: [PlatformFamily.PLAYSTATION_5],
       platforms: ['PlayStation 5'],
@@ -132,25 +177,30 @@ async function seedDevGames(userId: string) {
       interestStatus: InterestStatus.MUST_BUY,
       purchaseStatus: PurchaseStatus.RESERVED,
       useEarlyAccessAsMainDate: true,
-      dateSource: DateSource.MANUAL,
+      dateSource: DateSource.OFFICIAL,
       mediaFormat: MediaFormat.DIGITAL,
       selectedStore: 'PlayStation Store',
       totalPrice: 100,
-      notes: 'Edición Ultimate digital en PSN. Acceso anticipado.',
+      coverUrl:
+        'https://media.rawg.io/media/resize/1280/-/screenshots/70f/70fb740261ef152d0d3392a9a306c9ca.jpg',
+      notes: 'Edición Ultimate digital en PSN. Acceso anticipado (fecha oficial de juego).',
     },
     {
       title: 'Grand Theft Auto VI',
+      searchQuery: 'Grand Theft Auto VI',
       selectedPlatform: 'PlayStation 5',
       normalizedPlatforms: [PlatformFamily.PLAYSTATION_5],
       platforms: ['PlayStation 5'],
       releaseDate: new Date('2026-11-19'),
       interestStatus: InterestStatus.MUST_BUY,
       purchaseStatus: PurchaseStatus.PAID,
-      dateSource: DateSource.MANUAL,
+      dateSource: DateSource.OFFICIAL,
       mediaFormat: MediaFormat.DIGITAL,
       selectedStore: 'PlayStation Store',
       totalPrice: 100,
       amountPaid: 100,
+      coverUrl:
+        'https://media.rawg.io/media/resize/1280/-/games/734/7342a1cd82c8997ec620084ae4c2e7e4.jpg',
       notes: 'Digital PSN. Pagado.',
     },
   ];
@@ -159,6 +209,9 @@ async function seedDevGames(userId: string) {
     const existing = await prisma.game.findFirst({
       where: { userId, title: sample.title },
     });
+
+    const rawg = await fetchRawgCover(sample.title, sample.searchQuery);
+    const coverUrl = rawg?.coverUrl ?? sample.coverUrl;
 
     const data: Prisma.GameUncheckedCreateInput = {
       userId,
@@ -181,6 +234,10 @@ async function seedDevGames(userId: string) {
       bonusDescription: sample.bonusDescription,
       useEarlyAccessAsMainDate: sample.useEarlyAccessAsMainDate ?? false,
       notes: sample.notes,
+      coverUrl,
+      backgroundUrl: coverUrl,
+      rawgId: rawg?.rawgId,
+      slug: rawg?.slug ?? undefined,
     };
 
     if (existing) {
@@ -199,12 +256,23 @@ async function seedDevGames(userId: string) {
           includesBonus: data.includesBonus,
           bonusDescription: data.bonusDescription,
           useEarlyAccessAsMainDate: data.useEarlyAccessAsMainDate,
+          dateSource: data.dateSource,
           notes: data.notes,
           releaseDate: data.releaseDate,
           earlyAccessDate: data.earlyAccessDate,
+          coverUrl: data.coverUrl,
+          backgroundUrl: data.backgroundUrl,
+          ...(rawg
+            ? {
+                rawgId: rawg.rawgId,
+                slug: rawg.slug,
+              }
+            : {}),
         },
       });
-      console.log(`Juego de ejemplo actualizado: ${sample.title}`);
+      console.log(
+        `Juego de ejemplo actualizado: ${sample.title}${coverUrl ? ' (con portada)' : ''}`,
+      );
       continue;
     }
 
@@ -234,7 +302,7 @@ async function seedDevGames(userId: string) {
       });
     }
 
-    console.log(`Juego de ejemplo creado: ${sample.title}`);
+    console.log(`Juego de ejemplo creado: ${sample.title}${coverUrl ? ' (con portada)' : ''}`);
   }
 }
 

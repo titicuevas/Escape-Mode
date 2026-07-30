@@ -5,6 +5,7 @@ import {
   interestStatusLabels,
   mediaFormatLabels,
   purchaseStatusLabels,
+  dateSourceLabels,
   STORE_OPTIONS,
   type GameCreateInput,
 } from '@grc/shared';
@@ -18,6 +19,9 @@ const purchaseOptions = Object.entries(purchaseStatusLabels) as Array<
 >;
 const mediaFormatOptions = Object.entries(mediaFormatLabels) as Array<
   [NonNullable<GameCreateInput['mediaFormat']>, string]
+>;
+const dateSourceOptions = Object.entries(dateSourceLabels) as Array<
+  [GameCreateInput['dateSource'], string]
 >;
 
 function resolveStoreSelect(store: string | null | undefined): string {
@@ -166,6 +170,23 @@ export function GameForm({
           <label htmlFor="useEarlyAccessAsMainDate" className="text-sm">
             Usar acceso anticipado como fecha principal
           </label>
+        </div>
+
+        <div>
+          <label htmlFor="dateSource" className="mb-1.5 block text-sm">
+            Fuente de fecha
+          </label>
+          <select
+            id="dateSource"
+            className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
+            {...register('dateSource')}
+          >
+            {dateSourceOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

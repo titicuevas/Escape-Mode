@@ -1,5 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useAuth } from '../providers/AuthProvider';
+import { AppLoader } from '../components/AppLoader';
 
 export function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -7,8 +8,8 @@ export function ProtectedRoute() {
 
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-ink-muted" role="status">
-        Cargando sesión…
+      <div className="flex min-h-screen items-center justify-center">
+        <AppLoader label="Cargando sesión" />
       </div>
     );
   }

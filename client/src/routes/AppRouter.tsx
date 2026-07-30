@@ -44,7 +44,9 @@ function PublicOnly({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
   if (isLoading) {
     return (
-      <div className="flex min-h-screen items-center justify-center text-ink-muted">Cargando…</div>
+      <div className="flex min-h-screen items-center justify-center">
+        <PageSkeleton label="Cargando sesión" />
+      </div>
     );
   }
   if (isAuthenticated) {

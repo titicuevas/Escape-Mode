@@ -50,7 +50,71 @@ function loadFilters(preferredPlatforms?: string[]): Filters {
   }
 }
 
-type DragState = { x: number; y: number; active: boolean };
+type DragState = {
+  startX: number;
+  startY: number;
+  x: number;
+  y: number;
+  active: boolean;
+  axis: 'x' | 'y' | null;
+  pointerId: number | null;
+};
+
+const HINT_PX = 36;
+const COMMIT_PX = 72;
+const AXIS_LOCK_PX = 12;
+
+const decisionMeta: Record<
+  DiscoveryDecision,
+  { label: string; color: string; bg: string; border: string }
+> = {
+  DISMISSED: {
+    label: 'Descartar',
+    color: '#f87171',
+    bg: 'rgba(248, 113, 113, 0.28)',
+    border: 'rgba(248, 113, 113, 0.85)',
+  },
+  LIKED: {
+    label: 'Me interesa',
+    color: '#5eead4',
+    bg: 'rgba(94, 234, 212, 0.28)',
+    border: 'rgba(94, 234, 212, 0.85)',
+  },
+  THINKING: {
+    label: 'Me lo pienso',
+    color: '#fbbf24',
+    bg: 'rgba(251, 191, 36, 0.28)',
+    border: 'rgba(251, 191, 36, 0.85)',
+  },
+  MUST_BUY: {
+    label: 'Compra segura',
+    color: '#e879f9',
+    bg: 'rgba(232, 121, 249, 0.28)',
+    border: 'rgba(232, 121, 249, 0.85)',
+  },
+};
+
+function resolveGesture(x: number, y: number): DiscoveryDecision | null {
+  const ax = Math.abs(x);
+  const ay = Math.abs(y);
+  if (ax < HINT_PX && ay < HINT_PX) return null;
+  if (ay >= ax) {
+    if (y < -HINT_PX) return 'MUST_BUY';
+    if (y > HINT_PX) return 'THINKING';
+    return null;
+  }
+  if (x > HINT_PX) return 'LIKED';
+  if (x < -HINT_PX) return 'DISMISSED';
+  return null;
+}
+
+function resolveCommit(x: number, y: number): DiscoveryDecision | null {
+  const ax = Math.abs(x);
+  const ay = Math.abs(y);
+  if (ay >= ax && ay >= COMMIT_PX) return y < 0 ? 'MUST_BUY' : 'THINKING';
+  if (ax > ay && ax >= COMMIT_PX) return x > 0 ? 'LIKED' : 'DISMISSED';
+  return null;
+}
 
 export function DiscoverPage() {
   const queryClient = useQueryClient();
@@ -65,10 +129,18 @@ export function DiscoverPage() {
   const [lastDecisionId, setLastDecisionId] = useState<string | null>(null);
   const [lastCard, setLastCard] = useState<RawgGameCard | null>(null);
   const [detail, setDetail] = useState<RawgGameCard | null>(null);
-  const [hint, setHint] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const drag = useRef<DragState>({ x: 0, y: 0, active: false });
+  const drag = useRef<DragState>({
+    startX: 0,
+    startY: 0,
+    x: 0,
+    y: 0,
+    active: false,
+    axis: null,
+    pointerId: null,
+  });
   const [offset, setOffset] = useState({ x: 0, y: 0 });
+  const [leaving, setLeaving] = useState<DiscoveryDecision | null>(null);
 
   useEffect(() => {
     if (prefsSynced || !preferences) return;
@@ -129,7 +201,7 @@ export function DiscoverPage() {
       setLastCard(current);
       setQueue((q) => q.slice(1));
       setOffset({ x: 0, y: 0 });
-      setHint(null);
+      setLeaving(null);
       await queryClient.invalidateQueries({ queryKey: ['games'] });
       await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
       if (decision === 'DISMISSED') {
@@ -139,7 +211,7 @@ export function DiscoverPage() {
     onError: (err) => {
       setError(err instanceof ApiError ? err.message : 'No se pudo guardar la decisión');
       setOffset({ x: 0, y: 0 });
-      setHint(null);
+      setLeaving(null);
     },
   });
 
@@ -176,13 +248,27 @@ export function DiscoverPage() {
 
   const decide = useCallback(
     (decision: DiscoveryDecision) => {
-      if (!current || decideMutation.isPending || !online) {
+      if (!current || decideMutation.isPending || !online || leaving) {
         if (!online) setError('Sin conexión: no se pueden guardar decisiones.');
         return;
       }
-      void decideMutation.mutateAsync(decision);
+
+      const exit =
+        decision === 'LIKED'
+          ? { x: 420, y: 0 }
+          : decision === 'DISMISSED'
+            ? { x: -420, y: 0 }
+            : decision === 'MUST_BUY'
+              ? { x: 0, y: -480 }
+              : { x: 0, y: 480 };
+
+      setLeaving(decision);
+      setOffset(exit);
+      window.setTimeout(() => {
+        void decideMutation.mutateAsync(decision);
+      }, 160);
     },
-    [current, decideMutation, online],
+    [current, decideMutation, online, leaving],
   );
 
   useEffect(() => {
@@ -197,7 +283,7 @@ export function DiscoverPage() {
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         decide('MUST_BUY');
-      } else if (e.key.toLowerCase() === 'm') {
+      } else if (e.key === 'ArrowDown' || e.key.toLowerCase() === 'm') {
         e.preventDefault();
         decide('THINKING');
       } else if (e.key.toLowerCase() === 'z') {
@@ -209,40 +295,72 @@ export function DiscoverPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [decide, lastDecisionId, undoMutation]);
 
-  const gestureHint = useMemo(() => {
-    if (Math.abs(offset.x) < 40 && Math.abs(offset.y) < 40) return null;
-    if (offset.y < -80) return 'Compra segura';
-    if (offset.x > 80) return 'Me interesa';
-    if (offset.x < -80) return 'Descartar';
-    return null;
-  }, [offset]);
+  const activeGesture = useMemo(
+    () => (leaving ? leaving : resolveGesture(offset.x, offset.y)),
+    [leaving, offset.x, offset.y],
+  );
+  const gestureStrength = useMemo(() => {
+    const dist = Math.max(Math.abs(offset.x), Math.abs(offset.y));
+    return Math.min(1, dist / COMMIT_PX);
+  }, [offset.x, offset.y]);
 
-  const onPointerDown = (e: PointerEvent<HTMLDivElement>) => {
-    drag.current = { x: e.clientX, y: e.clientY, active: true };
+  const onPointerDown = (e: PointerEvent<HTMLElement>) => {
+    if (leaving || decideMutation.isPending) return;
+    drag.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      x: 0,
+      y: 0,
+      active: true,
+      axis: null,
+      pointerId: e.pointerId,
+    };
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
-  const onPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+  const onPointerMove = (e: PointerEvent<HTMLElement>) => {
     if (!drag.current.active) return;
-    const dx = e.clientX - drag.current.x;
-    const dy = e.clientY - drag.current.y;
+    let dx = e.clientX - drag.current.startX;
+    let dy = e.clientY - drag.current.startY;
+
+    if (!drag.current.axis) {
+      if (Math.abs(dx) > AXIS_LOCK_PX || Math.abs(dy) > AXIS_LOCK_PX) {
+        drag.current.axis = Math.abs(dx) >= Math.abs(dy) ? 'x' : 'y';
+      }
+    }
+
+    if (drag.current.axis === 'x') dy *= 0.15;
+    if (drag.current.axis === 'y') dx *= 0.15;
+
+    // Resistencia suave para que no haga falta arrastrar tanto
+    dx *= 1.15;
+    dy *= 1.15;
+
+    drag.current.x = dx;
+    drag.current.y = dy;
     setOffset({ x: dx, y: dy });
-    if (dy < -80) setHint('Compra segura');
-    else if (dx > 80) setHint('Me interesa');
-    else if (dx < -80) setHint('Descartar');
-    else setHint(null);
+
+    if (drag.current.axis) {
+      e.preventDefault();
+    }
+  };
+
+  const resetDrag = () => {
+    drag.current.active = false;
+    drag.current.axis = null;
+    drag.current.pointerId = null;
   };
 
   const onPointerUp = () => {
     if (!drag.current.active) return;
-    drag.current.active = false;
-    if (offset.y < -120) decide('MUST_BUY');
-    else if (offset.x > 120) decide('LIKED');
-    else if (offset.x < -120) decide('DISMISSED');
-    else {
-      setOffset({ x: 0, y: 0 });
-      setHint(null);
+    const { x, y } = drag.current;
+    resetDrag();
+    const commit = resolveCommit(x, y);
+    if (commit) {
+      decide(commit);
+      return;
     }
+    setOffset({ x: 0, y: 0 });
   };
 
   const platformOptions = Object.entries(platformFamilyLabels).filter(
@@ -254,7 +372,7 @@ export function DiscoverPage() {
       <header>
         <h2 className="text-2xl font-semibold sm:text-3xl">Descubrir</h2>
         <p className="mt-2 text-sm text-ink-muted sm:text-base">
-          Desliza o usa los botones. Izquierda descarta, derecha interesa, arriba compra segura.
+          Desliza la carta: → me interesa · ← descartar · ↑ compra segura · ↓ me lo pienso.
         </p>
       </header>
 
@@ -362,26 +480,47 @@ export function DiscoverPage() {
 
       {current ? (
         <div className="relative mx-auto w-full max-w-md">
-          {(hint || gestureHint) && (
-            <div
-              className="pointer-events-none absolute inset-x-0 top-4 z-20 text-center text-lg font-semibold text-accent"
-              aria-live="polite"
-            >
-              {hint || gestureHint}
-            </div>
-          )}
-
           <article
-            className="select-none overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40 touch-none"
+            className="relative select-none overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40 touch-none"
             style={{
-              transform: `translate(${offset.x}px, ${offset.y}px) rotate(${offset.x / 30}deg)`,
-              transition: drag.current.active ? 'none' : 'transform 160ms ease',
+              transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${offset.x / 28}deg)`,
+              transition: drag.current.active ? 'none' : 'transform 180ms cubic-bezier(.2,.8,.2,1)',
+              willChange: 'transform',
+              boxShadow: activeGesture
+                ? `0 0 0 1px ${decisionMeta[activeGesture].border}, 0 24px 48px ${decisionMeta[activeGesture].bg}`
+                : undefined,
             }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
           >
+            {activeGesture ? (
+              <div
+                className="pointer-events-none absolute inset-0 z-10 transition-opacity"
+                style={{
+                  background: decisionMeta[activeGesture].bg,
+                  opacity: 0.35 + gestureStrength * 0.55,
+                }}
+                aria-hidden
+              />
+            ) : null}
+
+            {activeGesture ? (
+              <div
+                className="pointer-events-none absolute left-1/2 top-5 z-20 -translate-x-1/2 rounded-full border px-3 py-1 text-sm font-semibold uppercase tracking-wide"
+                style={{
+                  color: decisionMeta[activeGesture].color,
+                  borderColor: decisionMeta[activeGesture].border,
+                  background: 'rgba(11, 18, 32, 0.72)',
+                  opacity: Math.min(1, 0.4 + gestureStrength),
+                }}
+                aria-live="polite"
+              >
+                {decisionMeta[activeGesture].label}
+              </div>
+            ) : null}
+
             <div className="relative aspect-[3/4] overflow-hidden bg-surface">
               <CoverImage
                 src={current.coverUrl || current.backgroundUrl}
@@ -405,7 +544,8 @@ export function DiscoverPage() {
               <button
                 type="button"
                 className="text-accent underline"
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   void api.rawgDetail(current.rawgId).then((r) => setDetail(r.game));
                 }}
               >
@@ -419,15 +559,17 @@ export function DiscoverPage() {
               label="Descartar"
               icon={Ban}
               onClick={() => decide('DISMISSED')}
-              disabled={!online || decideMutation.isPending}
+              disabled={!online || decideMutation.isPending || Boolean(leaving)}
               tone="danger"
+              active={activeGesture === 'DISMISSED'}
             />
             <ActionButton
               label="Me lo pienso"
               icon={HelpCircle}
               onClick={() => decide('THINKING')}
-              disabled={!online || decideMutation.isPending}
+              disabled={!online || decideMutation.isPending || Boolean(leaving)}
               tone="warning"
+              active={activeGesture === 'THINKING'}
             />
             <ActionButton
               label="Deshacer"
@@ -440,19 +582,21 @@ export function DiscoverPage() {
               label="Me interesa"
               icon={Heart}
               onClick={() => decide('LIKED')}
-              disabled={!online || decideMutation.isPending}
+              disabled={!online || decideMutation.isPending || Boolean(leaving)}
               tone="accent"
+              active={activeGesture === 'LIKED'}
             />
             <ActionButton
               label="Compra segura"
               icon={ShieldCheck}
               onClick={() => decide('MUST_BUY')}
-              disabled={!online || decideMutation.isPending}
+              disabled={!online || decideMutation.isPending || Boolean(leaving)}
               tone="special"
+              active={activeGesture === 'MUST_BUY'}
             />
           </div>
           <p className="mt-3 text-center text-[11px] text-ink-muted">
-            Atajos: ← descartar · → interesa · ↑ compra segura · M me lo pienso · Z deshacer
+            Atajos: ← descartar · → interesa · ↑ compra segura · ↓ / M me lo pienso · Z deshacer
           </p>
         </div>
       ) : null}
@@ -503,12 +647,14 @@ function ActionButton({
   onClick,
   disabled,
   tone,
+  active,
 }: {
   label: string;
   icon: typeof Heart;
   onClick: () => void;
   disabled?: boolean;
   tone: 'danger' | 'warning' | 'accent' | 'special' | 'muted';
+  active?: boolean;
 }) {
   const tones = {
     danger: 'border-danger/40 text-danger',
@@ -517,6 +663,13 @@ function ActionButton({
     special: 'border-fuchsia-400/40 text-fuchsia-200',
     muted: 'border-white/15 text-ink-muted',
   };
+  const activeTones = {
+    danger: 'bg-danger/25 scale-105',
+    warning: 'bg-warning/25 scale-105',
+    accent: 'bg-accent/25 scale-105',
+    special: 'bg-fuchsia-400/25 scale-105',
+    muted: 'bg-white/10 scale-105',
+  };
   return (
     <button
       type="button"
@@ -524,7 +677,9 @@ function ActionButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[10px] disabled:opacity-40 ${tones[tone]}`}
+      className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border px-1 text-[10px] transition duration-150 disabled:opacity-40 ${tones[tone]} ${
+        active ? activeTones[tone] : ''
+      }`}
     >
       <Icon className="size-5" aria-hidden />
       <span className="leading-tight">{label}</span>

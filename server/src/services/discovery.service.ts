@@ -1,4 +1,4 @@
-import type { DiscoveryDecisionType, InterestStatus, PlatformFamily } from '@prisma/client';
+import type { DiscoveryDecisionType, InterestStatus, PlatformFamily, Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
 import { parseDateOnly, toDateOnlyString } from '../utils/dates.js';
@@ -41,6 +41,46 @@ export async function getExcludedRawgIds(userId: string): Promise<Set<number>> {
   return ids;
 }
 
+/** Títulos ya en biblioteca (para no volver a mostrarlos en Descubrir si faltaba rawgId). */
+export async function getExcludedTitles(userId: string): Promise<Set<string>> {
+  const games = await prisma.game.findMany({
+    where: { userId },
+    select: { title: true },
+  });
+  return new Set(games.map((g) => normalizeGameTitle(g.title)));
+}
+
+export function normalizeGameTitle(title: string): string {
+  return title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+async function findExistingLibraryGame(
+  tx: Prisma.TransactionClient,
+  userId: string,
+  rawgId: number,
+  title: string,
+) {
+  const byRawg = await tx.game.findFirst({
+    where: { userId, rawgId },
+  });
+  if (byRawg) return byRawg;
+
+  const candidates = await tx.game.findMany({
+    where: { userId },
+    select: { id: true, title: true, rawgId: true },
+  });
+  const needle = normalizeGameTitle(title);
+  const match = candidates.find(
+    (g) => g.rawgId == null && normalizeGameTitle(g.title) === needle,
+  );
+  if (!match) return null;
+  return tx.game.findUniqueOrThrow({ where: { id: match.id } });
+}
+
 export async function decideDiscovery(userId: string, input: DiscoveryDecideInput) {
   const interest =
     input.decision === 'DISMISSED' ? null : decisionToInterest[input.decision];
@@ -78,14 +118,18 @@ export async function decideDiscovery(userId: string, input: DiscoveryDecideInpu
     let gameId: string | null = null;
 
     if (interest) {
-      const existing = await tx.game.findFirst({
-        where: { userId, rawgId: input.rawgId },
-      });
+      const existing = await findExistingLibraryGame(tx, userId, input.rawgId, input.title);
 
       if (existing) {
         const updated = await tx.game.update({
           where: { id: existing.id },
-          data: { interestStatus: interest },
+          data: {
+            interestStatus: interest,
+            rawgId: existing.rawgId ?? input.rawgId,
+            slug: existing.slug ?? input.slug ?? undefined,
+            coverUrl: existing.coverUrl ?? input.coverUrl ?? undefined,
+            backgroundUrl: existing.backgroundUrl ?? input.backgroundUrl ?? undefined,
+          },
         });
         gameId = updated.id;
       } else {

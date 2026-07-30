@@ -6,10 +6,12 @@ import {
   type PlatformFamily,
   type PreferencesUpdateInput,
 } from '@grc/shared';
+import { useQueryClient } from '@tanstack/react-query';
 import { PageSkeleton } from '../components/Skeleton';
 import { useAuth } from '../providers/AuthProvider';
 import { usePreferences } from '../providers/PreferencesProvider';
 import { useOnline } from '../components/OfflineBanner';
+import { api, ApiError } from '../api/client';
 
 const platformOptions = Object.entries(platformFamilyLabels).filter(([key]) => key !== 'OTHER') as Array<
   [PlatformFamily, string]
@@ -19,10 +21,13 @@ export function SettingsPage() {
   const { user, logout } = useAuth();
   const { preferences, isLoading, update } = usePreferences();
   const online = useOnline();
+  const queryClient = useQueryClient();
   const [draft, setDraft] = useState<PreferencesUpdateInput | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [coverMsg, setCoverMsg] = useState<string | null>(null);
+  const [covering, setCovering] = useState(false);
 
   useEffect(() => {
     if (!preferences) return;
@@ -64,6 +69,30 @@ export function SettingsPage() {
     }
   };
 
+  const onBackfillCovers = async () => {
+    if (!online) {
+      setError('Sin conexión: no se pueden buscar portadas.');
+      return;
+    }
+    setCovering(true);
+    setCoverMsg(null);
+    setError(null);
+    try {
+      const result = await api.backfillCovers();
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setCoverMsg(
+        result.updated > 0
+          ? `Se actualizaron ${result.updated} portada(s).`
+          : 'No había juegos sin portada (o RAWG no devolvió imagen).',
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudieron rellenar las portadas.');
+    } finally {
+      setCovering(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
@@ -83,6 +112,26 @@ export function SettingsPage() {
         >
           Cerrar sesión
         </button>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">
+        <h3 className="text-sm font-medium">Biblioteca</h3>
+        <p className="text-sm text-ink-muted">
+          Si ves monogramas en lugar de carátulas, rellena las portadas faltantes desde RAWG.
+        </p>
+        <button
+          type="button"
+          className="min-h-11 rounded-lg border border-accent/40 px-3 text-sm text-accent hover:bg-accent/10 disabled:opacity-50"
+          disabled={covering || !online}
+          onClick={() => void onBackfillCovers()}
+        >
+          {covering ? 'Buscando portadas…' : 'Rellenar portadas faltantes'}
+        </button>
+        {coverMsg ? (
+          <p className="text-sm text-success" role="status">
+            {coverMsg}
+          </p>
+        ) : null}
       </section>
 
       <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">

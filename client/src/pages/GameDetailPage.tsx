@@ -5,7 +5,7 @@ import { PageSkeleton } from '../components/Skeleton';
 import { StatusBadge } from '../components/StatusBadge';
 import { GameFinancePanels } from '../features/games/GameFinancePanels';
 import { formatDateEs, formatEuro } from '../utils/format';
-import { mediaFormatLabels } from '@grc/shared';
+import { mediaFormatLabels, dateSourceLabels } from '@grc/shared';
 import { useState } from 'react';
 import { CoverImage } from '../components/CoverImage';
 
@@ -33,6 +33,31 @@ export function GameDetailPage() {
     },
   });
 
+  const coverMutation = useMutation({
+    mutationFn: async () => {
+      const { results } = await api.rawgSearch(query.data!.game.title);
+      const best = results.find((r) => r.coverUrl) ?? results[0];
+      if (!best?.coverUrl) {
+        throw new ApiError('RAWG no devolvió portada para este título', 404);
+      }
+      return api.updateGame(id, {
+        coverUrl: best.coverUrl,
+        backgroundUrl: best.backgroundUrl ?? best.coverUrl,
+        rawgId: best.rawgId,
+        slug: best.slug,
+      });
+    },
+    onSuccess: async () => {
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (err) => {
+      setError(err instanceof ApiError ? err.message : 'No se pudo buscar la portada');
+    },
+  });
+
   if (query.isLoading) return <PageSkeleton />;
   if (query.isError || !query.data) {
     return (
@@ -55,6 +80,14 @@ export function GameDetailPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="rounded-lg border border-accent/40 px-3 py-2 text-sm text-accent hover:bg-accent/10 disabled:opacity-50"
+            disabled={coverMutation.isPending}
+            onClick={() => coverMutation.mutate()}
+          >
+            {coverMutation.isPending ? 'Buscando…' : 'Buscar portada RAWG'}
+          </button>
           <Link
             to={`/games/${game.id}/edit`}
             className="rounded-lg border border-white/15 px-3 py-2 text-sm hover:bg-white/5"
@@ -84,7 +117,7 @@ export function GameDetailPage() {
       <div className="grid gap-6 lg:grid-cols-[200px_1fr] xl:grid-cols-[220px_1fr]">
         <div className="mx-auto w-40 overflow-hidden rounded-xl border border-white/10 bg-surface-elevated sm:w-48 lg:mx-0 lg:w-full">
           <div className="aspect-[3/4]">
-            <CoverImage src={game.coverUrl} alt={`Portada de ${game.title}`} />
+            <CoverImage src={game.coverUrl} title={game.title} alt={`Portada de ${game.title}`} />
           </div>
         </div>
 
@@ -96,7 +129,7 @@ export function GameDetailPage() {
             </div>
             <div>
               <dt className="text-ink-muted">Fuente de la fecha</dt>
-              <dd>{game.dateSource}</dd>
+              <dd>{dateSourceLabels[game.dateSource] ?? game.dateSource}</dd>
             </div>
             <div>
               <dt className="text-ink-muted">Plataforma</dt>

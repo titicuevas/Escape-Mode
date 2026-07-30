@@ -140,26 +140,64 @@ export function DashboardPage() {
 
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
-          <h3 className="font-display text-xl font-semibold tracking-tight">
-            Próximos lanzamientos
-          </h3>
+          <div>
+            <h3 className="font-display text-xl font-semibold tracking-tight">
+              Próximos lanzamientos
+            </h3>
+            <p className="mt-1 text-xs text-ink-muted">
+              Interés y seguimiento · sin reserva ni compra todavía
+            </p>
+          </div>
           <Link to="/releases" className="text-sm text-accent">
             Ver todos
           </Link>
         </div>
         {data.nextFiveReleases.length === 0 ? (
           <EmptyState
-            title="Todavía no hay lanzamientos"
-            description="Añade juegos o usa Descubrir / búsqueda RAWG."
+            title="Nada en seguimiento"
+            description="Los juegos que reserves o compres aparecen abajo. Usa Descubrir para añadir interés."
             action={
-              <Link to="/games/new" className="text-sm text-accent underline">
-                Añadir juego
+              <Link to="/discover" className="text-sm text-accent underline">
+                Ir a Descubrir
               </Link>
             }
           />
         ) : (
           <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {data.nextFiveReleases.map((game) => (
+              <GameCard key={game.id} game={game} />
+            ))}
+          </div>
+        )}
+      </section>
+
+      <section>
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-display text-xl font-semibold tracking-tight">
+              Reservas y compras próximas
+            </h3>
+            <p className="mt-1 text-xs text-ink-muted">
+              Ya reservados, pagados o en camino
+            </p>
+          </div>
+          <Link to="/reservations" className="text-sm text-accent">
+            Ver reservas
+          </Link>
+        </div>
+        {data.upcomingCommittedReleases.length === 0 ? (
+          <EmptyState
+            title="Sin reservas próximas"
+            description="Cuando reserves o pagues un juego con fecha, aparecerá aquí."
+            action={
+              <Link to="/reservations" className="text-sm text-accent underline">
+                Ir a reservas
+              </Link>
+            }
+          />
+        ) : (
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {data.upcomingCommittedReleases.map((game) => (
               <GameCard key={game.id} game={game} />
             ))}
           </div>

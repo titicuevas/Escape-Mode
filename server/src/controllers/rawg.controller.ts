@@ -53,10 +53,11 @@ export async function discover(req: Request, res: Response, next: NextFunction) 
   try {
     const user = requireUser(req);
     const parsed = rawgDiscoverQuerySchema.parse(req.query);
-    const [preferredPlatforms, months, excludeRawgIds] = await Promise.all([
+    const [preferredPlatforms, months, excludeRawgIds, excludeTitles] = await Promise.all([
       discovery.getUserPreferredPlatforms(user.id),
       discovery.getDiscoveryMonths(user.id),
       discovery.getExcludedRawgIds(user.id),
+      discovery.getExcludedTitles(user.id),
     ]);
 
     let dateTo = parsed.dateTo;
@@ -71,6 +72,7 @@ export async function discover(req: Request, res: Response, next: NextFunction) 
       {
         preferredPlatforms,
         excludeRawgIds,
+        excludeTitles,
       },
     );
 

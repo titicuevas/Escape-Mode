@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from 'express';
 import { gameCreateSchema, gameUpdateSchema, gamesQuerySchema } from '@grc/shared';
 import type { AuthenticatedRequest } from '../types/express.js';
 import * as gamesService from '../services/games.service.js';
+import { backfillMissingCovers } from '../services/covers.service.js';
 import { getOrCreatePreferences } from '../services/preferences.service.js';
 import { AppError } from '../utils/errors.js';
 
@@ -65,6 +66,16 @@ export async function remove(req: Request, res: Response, next: NextFunction) {
     const id = String(req.params.id);
     await gamesService.deleteGame(user.id, id);
     res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function backfillCovers(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = requireUser(req);
+    const result = await backfillMissingCovers(user.id);
+    res.json(result);
   } catch (error) {
     next(error);
   }

@@ -79,6 +79,7 @@ export interface DashboardResponse {
     daysRemaining: number;
   } | null;
   nextFiveReleases: Game[];
+  upcomingCommittedReleases: Game[];
   activeReservations: Game[];
   paidGamesCount: number;
   pendingAmountThisMonth: string;

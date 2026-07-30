@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 function initialsFrom(alt: string): string {
   const clean = alt.replace(/^Portada de\s+/i, '').trim();
@@ -20,6 +20,11 @@ export function CoverImage({
   title?: string;
 }) {
   const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    setFailed(false);
+  }, [src]);
+
   const showImage = Boolean(src) && !failed;
   const monogram = initialsFrom(title || alt);
 
@@ -54,7 +59,7 @@ export function CoverImage({
       alt={alt}
       className={className}
       loading="lazy"
-      referrerPolicy="strict-origin-when-cross-origin"
+      referrerPolicy="no-referrer"
       decoding="async"
       onError={() => setFailed(true)}
       draggable={false}

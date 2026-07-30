@@ -85,16 +85,21 @@ const results = [];
 
 {
   const out = JSON.parse(req(['-b', jar, 'http://127.0.0.1:3000/api/dashboard']));
+  const upcomingCount =
+    (Array.isArray(out.nextFiveReleases) ? out.nextFiveReleases.length : 0) +
+    (Array.isArray(out.upcomingCommittedReleases) ? out.upcomingCommittedReleases.length : 0);
   results.push([
     'dashboard',
     Boolean(out.nextRelease?.game?.title) &&
       Array.isArray(out.nextFiveReleases) &&
-      out.nextFiveReleases.length >= 1 &&
+      Array.isArray(out.upcomingCommittedReleases) &&
+      upcomingCount >= 1 &&
       typeof out.paidGamesCount === 'number',
     {
       next: out.nextRelease?.game?.title,
       days: out.nextRelease?.daysRemaining,
       nextFive: out.nextFiveReleases?.length,
+      committed: out.upcomingCommittedReleases?.length,
       paid: out.paidGamesCount,
       reservations: out.activeReservations?.length,
     },

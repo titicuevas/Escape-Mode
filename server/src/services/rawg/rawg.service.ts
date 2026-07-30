@@ -9,6 +9,7 @@ import {
 } from './normalize.js';
 import type { PlatformFamily } from '@prisma/client';
 import type { RawgDiscoverQuery } from '@grc/shared';
+import { normalizeGameTitle } from '../discovery.service.js';
 
 const RAWG_BASE = 'https://api.rawg.io/api';
 const TIMEOUT_MS = 8000;
@@ -109,6 +110,7 @@ export class RawgService {
     options: {
       preferredPlatforms: PlatformFamily[];
       excludeRawgIds: Set<number>;
+      excludeTitles?: Set<string>;
     },
   ): Promise<{ items: NormalizedRawgGame[]; page: number; hasMore: boolean; rawgUnavailable?: boolean }> {
     const today = new Date();
@@ -140,11 +142,14 @@ export class RawgService {
         exclude_additions: 'true',
       })) as { results?: Record<string, unknown>[]; next?: string | null };
 
+      const excludeTitles = options.excludeTitles ?? new Set<string>();
+
       const items = (data.results ?? [])
         .filter((raw) => !isLikelyDlcOrAddition(raw as never))
         .map((item) => normalizeRawgListItem(item))
         .filter((g): g is NormalizedRawgGame => g !== null)
         .filter((g) => !options.excludeRawgIds.has(g.rawgId))
+        .filter((g) => !excludeTitles.has(normalizeGameTitle(g.title)))
         .filter((g) => (query.requireDate ? Boolean(g.releaseDate) : true))
         .filter((g) => {
           if (g.normalizedPlatforms.length === 0) return false;

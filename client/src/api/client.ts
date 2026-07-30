@@ -142,6 +142,10 @@ export const api = {
       method: 'PATCH',
       body: JSON.stringify(body),
     }),
+  backfillCovers: () =>
+    request<{ scanned: number; updated: number }>('/api/games/actions/backfill-covers', {
+      method: 'POST',
+    }),
 };
 
 export { ApiError };

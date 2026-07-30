@@ -2,6 +2,21 @@ import { prisma } from '../config/prisma.js';
 import { calculateRemainingAmount, toNumber } from '../utils/money.js';
 import { daysUntil, getMainDate, startOfDayUTC, toDateOnlyString } from '../utils/dates.js';
 import { serializeGame } from './games.service.js';
+import type { PurchaseStatus } from '@prisma/client';
+
+/** Compra en marcha o ya pagada: van a reservas / presupuesto, no a la lista de descubrimiento. */
+const COMMITTED_PURCHASE: PurchaseStatus[] = [
+  'RESERVED',
+  'PARTIALLY_PAID',
+  'PAID',
+  'RECEIVED',
+  'PLAYING',
+  'COMPLETED',
+];
+
+function isCommitted(status: PurchaseStatus) {
+  return COMMITTED_PURCHASE.includes(status);
+}
 
 export async function getDashboard(userId: string) {
   const now = new Date();
@@ -25,8 +40,12 @@ export async function getDashboard(userId: string) {
     .filter((x) => x.mainDate.getTime() >= today.getTime())
     .sort((a, b) => a.mainDate.getTime() - b.mainDate.getTime());
 
+  const upcomingWatchlist = upcoming.filter((x) => !isCommitted(x.game.purchaseStatus));
+  const upcomingCommitted = upcoming.filter((x) => isCommitted(x.game.purchaseStatus));
+
   const nextRelease = upcoming[0] ?? null;
-  const nextFive = upcoming.slice(0, 5).map((x) => serializeGame(x.game));
+  const nextFive = upcomingWatchlist.slice(0, 5).map((x) => serializeGame(x.game));
+  const nextCommitted = upcomingCommitted.slice(0, 5).map((x) => serializeGame(x.game));
 
   const activeReservations = games.filter((g) =>
     ['RESERVED', 'PARTIALLY_PAID', 'WAITING_OFFER'].includes(g.purchaseStatus),
@@ -75,6 +94,7 @@ export async function getDashboard(userId: string) {
         }
       : null,
     nextFiveReleases: nextFive,
+    upcomingCommittedReleases: nextCommitted,
     activeReservations: activeReservations.map(serializeGame),
     paidGamesCount: paidGames.length,
     pendingAmountThisMonth: pendingThisMonth.toFixed(2),

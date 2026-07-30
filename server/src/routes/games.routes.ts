@@ -8,6 +8,7 @@ export const gamesRouter = Router();
 gamesRouter.use(requireAuth);
 gamesRouter.get('/', gamesController.list);
 gamesRouter.post('/', gamesController.create);
+gamesRouter.post('/actions/backfill-covers', gamesController.backfillCovers);
 
 gamesRouter.get('/:gameId/offers', finance.listOffers);
 gamesRouter.post('/:gameId/offers', finance.createOffer);

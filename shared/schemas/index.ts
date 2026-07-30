@@ -57,6 +57,13 @@ export const mediaFormatLabels = {
   UNKNOWN: 'Sin especificar',
 } as const;
 
+export const dateSourceLabels = {
+  OFFICIAL: 'Oficial',
+  RAWG: 'RAWG',
+  MANUAL: 'Manual',
+  UNKNOWN: 'Desconocida',
+} as const;
+
 export const platformFamilyLabels = {
   PLAYSTATION_5: 'PlayStation 5',
   XBOX_SERIES: 'Xbox Series',
