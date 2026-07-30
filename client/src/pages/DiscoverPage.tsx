@@ -129,6 +129,8 @@ export function DiscoverPage() {
   const [lastDecisionId, setLastDecisionId] = useState<string | null>(null);
   const [lastCard, setLastCard] = useState<RawgGameCard | null>(null);
   const [detail, setDetail] = useState<RawgGameCard | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const drag = useRef<DragState>({
     startX: 0,
@@ -366,6 +368,35 @@ export function DiscoverPage() {
     setOffset({ x: 0, y: 0 });
   };
 
+  const openDetails = useCallback(() => {
+    if (!current || !online) {
+      if (!online) setError('Sin conexión: no se pueden cargar los detalles.');
+      return;
+    }
+    setError(null);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetail(null);
+    void api
+      .rawgDetail(current.rawgId)
+      .then((r) => {
+        setDetail(r.game);
+      })
+      .catch((err) => {
+        setDetailOpen(false);
+        setError(err instanceof ApiError ? err.message : 'No se pudieron cargar los detalles');
+      })
+      .finally(() => {
+        setDetailLoading(false);
+      });
+  }, [current, online]);
+
+  const closeDetails = useCallback(() => {
+    setDetailOpen(false);
+    setDetail(null);
+    setDetailLoading(false);
+  }, []);
+
   const platformOptions = Object.entries(platformFamilyLabels).filter(
     ([key]) => key !== 'OTHER',
   );
@@ -482,9 +513,9 @@ export function DiscoverPage() {
       ) : null}
 
       {current ? (
-        <div className="relative mx-auto w-full max-w-md">
-          <article
-            className="relative select-none overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40"
+        <div className="relative mx-auto w-full max-w-md pb-4">
+          <div
+            className="relative overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40"
             style={{
               transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${offset.x / 28}deg)`,
               transition: drag.current.active ? 'none' : 'transform 180ms cubic-bezier(.2,.8,.2,1)',
@@ -521,7 +552,7 @@ export function DiscoverPage() {
             ) : null}
 
             <div
-              className="relative aspect-[3/4] touch-none overflow-hidden bg-surface"
+              className="relative aspect-[3/4] max-h-[min(52dvh,26rem)] touch-none overflow-hidden bg-surface sm:max-h-none"
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
@@ -536,37 +567,34 @@ export function DiscoverPage() {
                 <p className="mt-1 text-sm text-white/85">{formatDateEs(current.releaseDate)}</p>
               </div>
             </div>
-            <div className="space-y-2 p-4 text-sm">
-              <p className="text-ink-muted">
-                {current.platforms.slice(0, 4).join(' · ') || 'Sin plataformas'}
-              </p>
-              <p className="text-ink-muted">{current.genres.slice(0, 4).join(' · ')}</p>
-              {current.metacritic != null ? (
-                <p>
-                  Metacritic: <span className="font-semibold text-accent">{current.metacritic}</span>
-                </p>
-              ) : null}
-              <button
-                type="button"
-                className="min-h-10 text-accent underline disabled:opacity-50"
-                disabled={!online}
-                onClick={() => {
-                  void api
-                    .rawgDetail(current.rawgId)
-                    .then((r) => setDetail(r.game))
-                    .catch((err) => {
-                      setError(
-                        err instanceof ApiError ? err.message : 'No se pudieron cargar los detalles',
-                      );
-                    });
-                }}
-              >
-                Ver detalles
-              </button>
-            </div>
-          </article>
+          </div>
 
-          <div className="mt-4 grid grid-cols-5 gap-2">
+          <div className="relative z-10 mt-3 space-y-3 rounded-2xl border border-white/10 bg-surface-elevated/80 p-4 text-sm">
+            <p className="text-ink-muted">
+              {current.platforms.slice(0, 4).join(' · ') || 'Sin plataformas'}
+            </p>
+            <p className="text-ink-muted">{current.genres.slice(0, 4).join(' · ')}</p>
+            {current.metacritic != null ? (
+              <p>
+                Metacritic: <span className="font-semibold text-accent">{current.metacritic}</span>
+              </p>
+            ) : null}
+            <button
+              type="button"
+              className="flex min-h-11 w-full items-center justify-center rounded-xl border border-accent/40 bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15 disabled:opacity-50"
+              disabled={!online || detailLoading}
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openDetails();
+              }}
+            >
+              {detailLoading ? 'Cargando detalles…' : 'Ver detalles'}
+            </button>
+          </div>
+
+          <div className="relative z-10 mt-4 grid grid-cols-5 gap-2">
             <ActionButton
               label="Descartar"
               icon={Ban}
@@ -613,33 +641,43 @@ export function DiscoverPage() {
         </div>
       ) : null}
 
-      {detail ? (
-        <div className="fixed inset-0 z-40 flex items-end justify-center bg-black/60 p-3 sm:items-center">
+      {detailOpen ? (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-3 sm:items-center"
+          role="presentation"
+          onClick={closeDetails}
+        >
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={`Detalle de ${detail.title}`}
+            aria-label={detail ? `Detalle de ${detail.title}` : 'Detalle del juego'}
             className="max-h-[85dvh] w-full max-w-lg overflow-y-auto rounded-2xl border border-white/10 bg-surface-elevated p-4"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
           >
             <div className="mb-3 flex items-start justify-between gap-3">
-              <h3 className="text-lg font-semibold">{detail.title}</h3>
+              <h3 className="text-lg font-semibold">{detail?.title ?? current?.title ?? 'Detalle'}</h3>
               <button
                 type="button"
                 className="min-h-10 rounded-lg px-2 text-sm text-ink-muted hover:bg-white/5"
-                onClick={() => setDetail(null)}
+                onClick={closeDetails}
               >
                 Cerrar
               </button>
             </div>
-            {detail.description ? (
+            {detailLoading ? (
+              <PageSkeleton label="Cargando detalles" />
+            ) : detail?.description ? (
               <p className="whitespace-pre-wrap text-sm text-ink-muted">{detail.description}</p>
             ) : (
               <p className="text-sm text-ink-muted">Sin descripción.</p>
             )}
-            <p className="mt-3 text-xs text-ink-muted">
-              {detail.developer ? `Dev: ${detail.developer}` : null}
-              {detail.publisher ? ` · Pub: ${detail.publisher}` : null}
-            </p>
+            {detail && !detailLoading ? (
+              <p className="mt-3 text-xs text-ink-muted">
+                {detail.developer ? `Dev: ${detail.developer}` : null}
+                {detail.publisher ? ` · Pub: ${detail.publisher}` : null}
+              </p>
+            ) : null}
           </div>
         </div>
       ) : null}
