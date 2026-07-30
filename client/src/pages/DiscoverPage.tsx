@@ -306,6 +306,9 @@ export function DiscoverPage() {
 
   const onPointerDown = (e: PointerEvent<HTMLElement>) => {
     if (leaving || decideMutation.isPending) return;
+    const target = e.target as HTMLElement | null;
+    if (target?.closest('button, a, input, textarea, select, label')) return;
+
     drag.current = {
       startX: e.clientX,
       startY: e.clientY,
@@ -481,7 +484,7 @@ export function DiscoverPage() {
       {current ? (
         <div className="relative mx-auto w-full max-w-md">
           <article
-            className="relative select-none overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40 touch-none"
+            className="relative select-none overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated shadow-2xl shadow-black/40"
             style={{
               transform: `translate3d(${offset.x}px, ${offset.y}px, 0) rotate(${offset.x / 28}deg)`,
               transition: drag.current.active ? 'none' : 'transform 180ms cubic-bezier(.2,.8,.2,1)',
@@ -490,10 +493,6 @@ export function DiscoverPage() {
                 ? `0 0 0 1px ${decisionMeta[activeGesture].border}, 0 24px 48px ${decisionMeta[activeGesture].bg}`
                 : undefined,
             }}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
           >
             {activeGesture ? (
               <div
@@ -521,7 +520,13 @@ export function DiscoverPage() {
               </div>
             ) : null}
 
-            <div className="relative aspect-[3/4] overflow-hidden bg-surface">
+            <div
+              className="relative aspect-[3/4] touch-none overflow-hidden bg-surface"
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+            >
               <CoverImage
                 src={current.coverUrl || current.backgroundUrl}
                 alt={`Portada de ${current.title}`}
@@ -543,10 +548,17 @@ export function DiscoverPage() {
               ) : null}
               <button
                 type="button"
-                className="text-accent underline"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  void api.rawgDetail(current.rawgId).then((r) => setDetail(r.game));
+                className="min-h-10 text-accent underline disabled:opacity-50"
+                disabled={!online}
+                onClick={() => {
+                  void api
+                    .rawgDetail(current.rawgId)
+                    .then((r) => setDetail(r.game))
+                    .catch((err) => {
+                      setError(
+                        err instanceof ApiError ? err.message : 'No se pudieron cargar los detalles',
+                      );
+                    });
                 }}
               >
                 Ver detalles
