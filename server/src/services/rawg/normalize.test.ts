@@ -7,6 +7,7 @@ import {
   normalizeRawgDetail,
   normalizeRawgListItem,
   normalizeRawgTrailers,
+  normalizeRawgYoutube,
   stripHtmlToText,
   tasteOverlapScore,
 } from './normalize.js';
