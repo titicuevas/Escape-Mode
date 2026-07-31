@@ -304,3 +304,51 @@ export async function getDiscoveryMonths(userId: string): Promise<number> {
   const prefs = await prisma.userPreferences.findUnique({ where: { userId } });
   return prefs?.defaultDiscoveryMonths ?? 12;
 }
+
+/**
+ * Géneros preferidos según biblioteca y decisiones de Descubrir.
+ * MUST_BUY > INTERESTED/LIKED > THINKING.
+ */
+export async function getPreferredGenres(userId: string, limit = 5): Promise<string[]> {
+  const [games, decisions] = await Promise.all([
+    prisma.game.findMany({
+      where: {
+        userId,
+        interestStatus: { in: ['MUST_BUY', 'INTERESTED', 'THINKING'] },
+      },
+      select: { genres: true, interestStatus: true },
+    }),
+    prisma.discoveryDecision.findMany({
+      where: {
+        userId,
+        decision: { in: ['MUST_BUY', 'LIKED', 'THINKING'] },
+      },
+      select: { genres: true, decision: true },
+    }),
+  ]);
+
+  const scores = new Map<string, number>();
+
+  const bump = (genres: string[], weight: number) => {
+    for (const raw of genres) {
+      const name = raw.trim();
+      if (!name) continue;
+      scores.set(name, (scores.get(name) ?? 0) + weight);
+    }
+  };
+
+  for (const g of games) {
+    const weight =
+      g.interestStatus === 'MUST_BUY' ? 3 : g.interestStatus === 'INTERESTED' ? 2 : 1;
+    bump(g.genres, weight);
+  }
+  for (const d of decisions) {
+    const weight = d.decision === 'MUST_BUY' ? 3 : d.decision === 'LIKED' ? 2 : 1;
+    bump(d.genres, weight);
+  }
+
+  return [...scores.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, limit)
+    .map(([name]) => name);
+}

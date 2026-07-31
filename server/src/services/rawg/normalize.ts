@@ -25,6 +25,59 @@ export const RAWG_PLATFORM_IDS: Record<PlatformFamily, number | null> = {
   OTHER: null,
 };
 
+/** IDs de género RAWG más usados (filtro discover). */
+export const RAWG_GENRE_IDS_BY_KEY: Record<string, number> = {
+  action: 4,
+  indie: 51,
+  adventure: 3,
+  rpg: 5,
+  roleplayinggames: 5,
+  roleplaying: 5,
+  strategy: 10,
+  shooter: 2,
+  casual: 40,
+  simulation: 14,
+  puzzle: 7,
+  arcade: 11,
+  platformer: 83,
+  racing: 1,
+  sports: 15,
+  fighting: 6,
+  family: 19,
+  boardgames: 28,
+  educational: 34,
+  card: 17,
+  massivelymultiplayer: 59,
+  mmo: 59,
+};
+
+export function genreKey(name: string): string {
+  return name
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, '');
+}
+
+export function mapGenreNamesToRawgIds(names: string[]): number[] {
+  const ids = new Set<number>();
+  for (const name of names) {
+    const id = RAWG_GENRE_IDS_BY_KEY[genreKey(name)];
+    if (id != null) ids.add(id);
+  }
+  return [...ids];
+}
+
+export function tasteOverlapScore(gameGenres: string[], preferredGenres: string[]): number {
+  if (preferredGenres.length === 0 || gameGenres.length === 0) return 0;
+  const preferred = new Set(preferredGenres.map(genreKey));
+  let score = 0;
+  for (const g of gameGenres) {
+    if (preferred.has(genreKey(g))) score += 1;
+  }
+  return score;
+}
+
 export function stripHtmlToText(html: string | null | undefined): string {
   if (!html) return '';
   return html

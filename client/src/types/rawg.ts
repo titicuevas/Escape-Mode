@@ -33,6 +33,8 @@ export interface DiscoverResponse {
   page: number;
   hasMore: boolean;
   rawgUnavailable?: boolean;
+  tasteGenres?: string[];
+  tasteApplied?: boolean;
 }
 
 export interface DismissedItem {

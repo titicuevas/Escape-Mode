@@ -1,12 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import {
   isLikelyDlcOrAddition,
+  mapGenreNamesToRawgIds,
   normalizePlatformName,
   normalizePlatforms,
   normalizeRawgDetail,
   normalizeRawgListItem,
   normalizeRawgTrailers,
   stripHtmlToText,
+  tasteOverlapScore,
 } from './normalize.js';
 
 describe('normalizePlatformName', () => {
@@ -116,5 +118,16 @@ describe('normalizeRawgTrailers', () => {
     expect(trailers).toHaveLength(2);
     expect(trailers[0]?.videoUrl).toBe('https://example.com/max.mp4');
     expect(trailers[1]?.name).toBe('Gameplay');
+  });
+});
+
+describe('mapGenreNamesToRawgIds / tasteOverlapScore', () => {
+  it('mapea géneros conocidos a IDs RAWG', () => {
+    expect(mapGenreNamesToRawgIds(['Action', 'RPG', 'Desconocido'])).toEqual([4, 5]);
+  });
+
+  it('puntúa solape de gustos', () => {
+    expect(tasteOverlapScore(['Action', 'Indie'], ['Action', 'RPG'])).toBe(1);
+    expect(tasteOverlapScore(['Action', 'RPG'], ['Action', 'RPG'])).toBe(2);
   });
 });

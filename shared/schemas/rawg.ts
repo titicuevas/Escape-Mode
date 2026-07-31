@@ -40,6 +40,10 @@ export const rawgDiscoverQuerySchema = z.object({
     .enum(['true', 'false'])
     .optional()
     .transform((v) => (v === undefined ? true : v === 'true')),
+  useTaste: z
+    .enum(['true', 'false'])
+    .optional()
+    .transform((v) => (v === undefined ? true : v === 'true')),
 });
 
 const optionalHttpUrl = z

@@ -25,12 +25,14 @@ type Filters = {
   platforms: string[];
   requireDate: boolean;
   ordering: string;
+  useTaste: boolean;
 };
 
 const defaultFilters: Filters = {
   platforms: ['PLAYSTATION_5'],
   requireDate: true,
   ordering: 'released',
+  useTaste: true,
 };
 
 function loadFilters(preferredPlatforms?: string[]): Filters {
@@ -164,6 +166,7 @@ export function DiscoverPage() {
         platforms: filters.platforms.join(',') || undefined,
         requireDate: filters.requireDate ? 'true' : 'false',
         ordering: filters.ordering,
+        useTaste: filters.useTaste ? 'true' : 'false',
         page,
         pageSize: 12,
       }),
@@ -409,6 +412,20 @@ export function DiscoverPage() {
         <p className="mt-2 text-sm text-ink-muted sm:text-base">
           Desliza la carta: → me interesa · ← descartar · ↑ compra segura · ↓ me lo pienso.
         </p>
+        {discoverQuery.data?.tasteGenres && discoverQuery.data.tasteGenres.length > 0 ? (
+          <p className="mt-2 text-xs text-accent">
+            {filters.useTaste
+              ? `Según tus gustos: ${discoverQuery.data.tasteGenres.join(' · ')}`
+              : 'Personalización por gustos desactivada.'}
+            {filters.useTaste && discoverQuery.data.tasteApplied === false
+              ? ' · Mostrando catálogo amplio (pocos resultados por género).'
+              : null}
+          </p>
+        ) : filters.useTaste ? (
+          <p className="mt-2 text-xs text-ink-muted">
+            Marca juegos como «Me interesa» o «Compra segura» para personalizar el mazo.
+          </p>
+        ) : null}
       </header>
 
       <details className="rounded-xl border border-white/10 bg-surface-elevated/50 p-3">
@@ -455,6 +472,18 @@ export function DiscoverPage() {
                 }}
               />
               Solo con fecha
+            </label>
+            <label className="flex min-h-11 items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={filters.useTaste}
+                onChange={(e) => {
+                  setPage(1);
+                  setQueue([]);
+                  setFilters((f) => ({ ...f, useTaste: e.target.checked }));
+                }}
+              />
+              Priorizar según mis gustos
             </label>
             <div>
               <label htmlFor="ordering" className="mb-1 block text-xs text-ink-muted">

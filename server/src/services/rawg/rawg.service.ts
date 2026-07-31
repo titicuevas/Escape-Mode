@@ -2,10 +2,12 @@ import { getEnv } from '../../config/env.js';
 import { AppError } from '../../utils/errors.js';
 import {
   isLikelyDlcOrAddition,
+  mapGenreNamesToRawgIds,
   normalizeRawgDetail,
   normalizeRawgListItem,
   normalizeRawgTrailers,
   RAWG_PLATFORM_IDS,
+  tasteOverlapScore,
   type NormalizedRawgGame,
 } from './normalize.js';
 import type { PlatformFamily } from '@prisma/client';
@@ -118,8 +120,17 @@ export class RawgService {
       preferredPlatforms: PlatformFamily[];
       excludeRawgIds: Set<number>;
       excludeTitles?: Set<string>;
+      preferredGenres?: string[];
+      useTaste?: boolean;
     },
-  ): Promise<{ items: NormalizedRawgGame[]; page: number; hasMore: boolean; rawgUnavailable?: boolean }> {
+  ): Promise<{
+    items: NormalizedRawgGame[];
+    page: number;
+    hasMore: boolean;
+    rawgUnavailable?: boolean;
+    tasteGenres?: string[];
+    tasteApplied?: boolean;
+  }> {
     const today = new Date();
     const defaultTo = new Date(today);
     defaultTo.setMonth(defaultTo.getMonth() + 12);
@@ -138,20 +149,27 @@ export class RawgService {
       .map((p) => RAWG_PLATFORM_IDS[p])
       .filter((id): id is number => id != null);
 
-    try {
-      const data = (await rawgFetch('/games', {
+    const preferredGenres = options.preferredGenres ?? [];
+    const useTaste = options.useTaste !== false && preferredGenres.length > 0;
+    const tasteGenreIds = useTaste ? mapGenreNamesToRawgIds(preferredGenres) : [];
+    const manualGenres = query.genres?.trim() || undefined;
+    const tasteGenresParam =
+      !manualGenres && tasteGenreIds.length > 0 ? tasteGenreIds.join(',') : undefined;
+
+    const fetchPage = async (genresParam?: string) =>
+      (await rawgFetch('/games', {
         dates: `${dateFrom},${dateTo}`,
         platforms: platformIds.length > 0 ? platformIds.join(',') : undefined,
         ordering: query.ordering,
         page: query.page,
         page_size: query.pageSize,
-        genres: query.genres || undefined,
+        genres: genresParam || manualGenres || undefined,
         exclude_additions: 'true',
       })) as { results?: Record<string, unknown>[]; next?: string | null };
 
+    const process = (data: { results?: Record<string, unknown>[]; next?: string | null }) => {
       const excludeTitles = options.excludeTitles ?? new Set<string>();
-
-      const items = (data.results ?? [])
+      let items = (data.results ?? [])
         .filter((raw) => !isLikelyDlcOrAddition(raw as never))
         .map((item) => normalizeRawgListItem(item))
         .filter((g): g is NormalizedRawgGame => g !== null)
@@ -163,15 +181,53 @@ export class RawgService {
           return g.normalizedPlatforms.some((p) => platforms.includes(p) || p === 'OTHER');
         });
 
+      if (useTaste && preferredGenres.length > 0) {
+        items = [...items].sort((a, b) => {
+          const scoreDiff =
+            tasteOverlapScore(b.genres, preferredGenres) -
+            tasteOverlapScore(a.genres, preferredGenres);
+          if (scoreDiff !== 0) return scoreDiff;
+          const da = a.releaseDate ?? '';
+          const db = b.releaseDate ?? '';
+          return da.localeCompare(db);
+        });
+      }
+
       return {
         items,
-        page: query.page,
         hasMore: Boolean(data.next),
+      };
+    };
+
+    try {
+      let tasteApplied = Boolean(tasteGenresParam);
+      let data = await fetchPage(tasteGenresParam);
+      let processed = process(data);
+
+      // Si el filtro de gustos deja el mazo vacío, ampliamos sin géneros
+      if (tasteApplied && processed.items.length === 0 && query.page === 1) {
+        tasteApplied = false;
+        data = await fetchPage(undefined);
+        processed = process(data);
+      }
+
+      return {
+        items: processed.items,
+        page: query.page,
+        hasMore: processed.hasMore,
+        tasteGenres: preferredGenres,
+        tasteApplied,
       };
     } catch (error) {
       if (error instanceof AppError) {
-        // El fallo de RAWG no debe tumbar el resto de la app
-        return { items: [], page: query.page, hasMore: false, rawgUnavailable: true };
+        return {
+          items: [],
+          page: query.page,
+          hasMore: false,
+          rawgUnavailable: true,
+          tasteGenres: preferredGenres,
+          tasteApplied: false,
+        };
       }
       throw error;
     }

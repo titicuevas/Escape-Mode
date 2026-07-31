@@ -53,12 +53,14 @@ export async function discover(req: Request, res: Response, next: NextFunction) 
   try {
     const user = requireUser(req);
     const parsed = rawgDiscoverQuerySchema.parse(req.query);
-    const [preferredPlatforms, months, excludeRawgIds, excludeTitles] = await Promise.all([
-      discovery.getUserPreferredPlatforms(user.id),
-      discovery.getDiscoveryMonths(user.id),
-      discovery.getExcludedRawgIds(user.id),
-      discovery.getExcludedTitles(user.id),
-    ]);
+    const [preferredPlatforms, months, excludeRawgIds, excludeTitles, preferredGenres] =
+      await Promise.all([
+        discovery.getUserPreferredPlatforms(user.id),
+        discovery.getDiscoveryMonths(user.id),
+        discovery.getExcludedRawgIds(user.id),
+        discovery.getExcludedTitles(user.id),
+        discovery.getPreferredGenres(user.id),
+      ]);
 
     let dateTo = parsed.dateTo;
     if (!dateTo) {
@@ -73,6 +75,8 @@ export async function discover(req: Request, res: Response, next: NextFunction) 
         preferredPlatforms,
         excludeRawgIds,
         excludeTitles,
+        preferredGenres,
+        useTaste: parsed.useTaste,
       },
     );
 
