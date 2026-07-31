@@ -37,6 +37,7 @@ export function createApp(env: Env) {
                 scriptSrc: ["'self'"],
                 styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
                 imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
+                mediaSrc: ["'self'", 'https:', 'blob:'],
                 connectSrc: ["'self'"],
                 fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
                 workerSrc: ["'self'", 'blob:'],

@@ -81,7 +81,53 @@ export type NormalizedRawgGame = {
   officialUrl?: string | null;
   rawgUrl?: string | null;
   esrbRating?: string | null;
+  trailers?: RawgTrailer[];
 };
+
+export type RawgTrailer = {
+  id: number;
+  name: string;
+  previewUrl: string | null;
+  videoUrl: string | null;
+};
+
+export function normalizeRawgTrailers(raw: unknown): RawgTrailer[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const results = Array.isArray((raw as { results?: unknown }).results)
+    ? ((raw as { results: unknown[] }).results)
+    : [];
+
+  const trailers: RawgTrailer[] = [];
+  for (const item of results) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as {
+      id?: unknown;
+      name?: unknown;
+      preview?: unknown;
+      data?: unknown;
+    };
+    const id = Number(row.id);
+    if (!Number.isFinite(id)) continue;
+
+    let videoUrl: string | null = null;
+    if (row.data && typeof row.data === 'object') {
+      const data = row.data as Record<string, unknown>;
+      const max = typeof data.max === 'string' ? data.max : null;
+      const sd = typeof data['480'] === 'string' ? data['480'] : null;
+      videoUrl = max || sd;
+    }
+
+    if (!videoUrl) continue;
+    trailers.push({
+      id,
+      name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : 'Trailer',
+      previewUrl: typeof row.preview === 'string' ? row.preview : null,
+      videoUrl,
+    });
+    if (trailers.length >= 3) break;
+  }
+  return trailers;
+}
 
 export function normalizeRawgListItem(raw: Record<string, unknown>): NormalizedRawgGame | null {
   const id = Number(raw.id);

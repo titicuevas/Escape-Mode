@@ -8,6 +8,7 @@ import { formatDateEs, formatEuro } from '../utils/format';
 import { mediaFormatLabels, dateSourceLabels } from '@grc/shared';
 import { useState } from 'react';
 import { CoverImage } from '../components/CoverImage';
+import { GameTrailers } from '../components/GameTrailers';
 
 export function GameDetailPage() {
   const { id = '' } = useParams();
@@ -19,6 +20,14 @@ export function GameDetailPage() {
     queryKey: ['games', id],
     queryFn: () => api.getGame(id),
     enabled: Boolean(id),
+  });
+
+  const rawgId = query.data?.game.rawgId ?? null;
+  const trailersQuery = useQuery({
+    queryKey: ['rawg', 'detail', rawgId],
+    queryFn: () => api.rawgDetail(rawgId!),
+    enabled: Boolean(rawgId),
+    staleTime: 10 * 60 * 1000,
   });
 
   const deleteMutation = useMutation({
@@ -191,6 +200,14 @@ export function GameDetailPage() {
               <h3 className="mb-1 font-medium">Descripción</h3>
               <p className="whitespace-pre-wrap text-ink-muted">{game.description}</p>
             </div>
+          ) : null}
+
+          {rawgId ? (
+            trailersQuery.isLoading ? (
+              <p className="text-sm text-ink-muted">Buscando trailer…</p>
+            ) : (
+              <GameTrailers trailers={trailersQuery.data?.game.trailers} />
+            )
           ) : null}
 
           {game.notes ? (

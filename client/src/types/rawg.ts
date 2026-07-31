@@ -1,5 +1,12 @@
 export type DiscoveryDecision = 'LIKED' | 'THINKING' | 'DISMISSED' | 'MUST_BUY';
 
+export interface RawgTrailer {
+  id: number;
+  name: string;
+  previewUrl: string | null;
+  videoUrl: string | null;
+}
+
 export interface RawgGameCard {
   rawgId: number;
   title: string;
@@ -18,6 +25,7 @@ export interface RawgGameCard {
   officialUrl?: string | null;
   rawgUrl?: string | null;
   esrbRating?: string | null;
+  trailers?: RawgTrailer[];
 }
 
 export interface DiscoverResponse {

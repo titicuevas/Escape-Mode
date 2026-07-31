@@ -17,6 +17,7 @@ import type { DiscoveryDecision, RawgGameCard } from '../types/rawg';
 import { usePreferences } from '../providers/PreferencesProvider';
 import { useOnline } from '../components/OfflineBanner';
 import { CoverImage } from '../components/CoverImage';
+import { GameTrailers } from '../components/GameTrailers';
 
 const FILTERS_KEY = 'grc.discover.filters';
 
@@ -668,17 +669,26 @@ export function DiscoverPage() {
             </div>
             {detailLoading ? (
               <PageSkeleton label="Cargando detalles" />
-            ) : detail?.description ? (
-              <p className="whitespace-pre-wrap text-sm text-ink-muted">{detail.description}</p>
             ) : (
-              <p className="text-sm text-ink-muted">Sin descripción.</p>
+              <div className="space-y-4">
+                <GameTrailers trailers={detail?.trailers} />
+                {detail?.description ? (
+                  <div>
+                    <h4 className="mb-1 text-sm font-medium">Descripción</h4>
+                    <p className="whitespace-pre-wrap text-sm text-ink-muted">{detail.description}</p>
+                    <p className="mt-2 text-[11px] text-ink-muted">Texto de RAWG (suele estar en inglés).</p>
+                  </div>
+                ) : (
+                  <p className="text-sm text-ink-muted">Sin descripción.</p>
+                )}
+                {detail ? (
+                  <p className="text-xs text-ink-muted">
+                    {detail.developer ? `Dev: ${detail.developer}` : null}
+                    {detail.publisher ? ` · Pub: ${detail.publisher}` : null}
+                  </p>
+                ) : null}
+              </div>
             )}
-            {detail && !detailLoading ? (
-              <p className="mt-3 text-xs text-ink-muted">
-                {detail.developer ? `Dev: ${detail.developer}` : null}
-                {detail.publisher ? ` · Pub: ${detail.publisher}` : null}
-              </p>
-            ) : null}
           </div>
         </div>
       ) : null}

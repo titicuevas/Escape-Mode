@@ -4,6 +4,7 @@ import {
   isLikelyDlcOrAddition,
   normalizeRawgDetail,
   normalizeRawgListItem,
+  normalizeRawgTrailers,
   RAWG_PLATFORM_IDS,
   type NormalizedRawgGame,
 } from './normalize.js';
@@ -97,12 +98,18 @@ export class RawgService {
   }
 
   async getGame(rawgId: number): Promise<NormalizedRawgGame> {
-    const data = (await rawgFetch(`/games/${rawgId}`, {})) as Record<string, unknown>;
+    const [data, movies] = await Promise.all([
+      rawgFetch(`/games/${rawgId}`, {}) as Promise<Record<string, unknown>>,
+      rawgFetch(`/games/${rawgId}/movies`, {}).catch(() => ({ results: [] })),
+    ]);
     const normalized = normalizeRawgDetail(data);
     if (!normalized) {
       throw new AppError(404, 'Juego no encontrado en RAWG');
     }
-    return normalized;
+    return {
+      ...normalized,
+      trailers: normalizeRawgTrailers(movies),
+    };
   }
 
   async discover(

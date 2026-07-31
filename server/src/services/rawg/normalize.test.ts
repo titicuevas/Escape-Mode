@@ -5,6 +5,7 @@ import {
   normalizePlatforms,
   normalizeRawgDetail,
   normalizeRawgListItem,
+  normalizeRawgTrailers,
   stripHtmlToText,
 } from './normalize.js';
 
@@ -91,5 +92,29 @@ describe('normalizeRawgDetail', () => {
     expect(detail?.publisher).toBe('Pub B');
     expect(detail?.rawgUrl).toBe('https://rawg.io/games/full-game');
     expect(detail?.esrbRating).toBe('Teen');
+  });
+});
+
+describe('normalizeRawgTrailers', () => {
+  it('extrae hasta 3 trailers con URL de vídeo', () => {
+    const trailers = normalizeRawgTrailers({
+      results: [
+        {
+          id: 1,
+          name: 'Launch Trailer',
+          preview: 'https://example.com/preview.jpg',
+          data: { 480: 'https://example.com/480.mp4', max: 'https://example.com/max.mp4' },
+        },
+        { id: 2, name: 'Sin vídeo', preview: null, data: {} },
+        {
+          id: 3,
+          name: 'Gameplay',
+          data: { 480: 'https://example.com/gp.mp4' },
+        },
+      ],
+    });
+    expect(trailers).toHaveLength(2);
+    expect(trailers[0]?.videoUrl).toBe('https://example.com/max.mp4');
+    expect(trailers[1]?.name).toBe('Gameplay');
   });
 });
