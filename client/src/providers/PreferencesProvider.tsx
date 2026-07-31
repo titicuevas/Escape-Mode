@@ -19,6 +19,8 @@ const fallback: Preferences = {
   defaultBudgetGrouping: 'RELEASE',
   hideDismissedGames: true,
   reduceMotion: false,
+  browserNotifications: false,
+  reminderDaysBefore: 7,
 };
 
 export function PreferencesProvider({ children }: { children: ReactNode }) {

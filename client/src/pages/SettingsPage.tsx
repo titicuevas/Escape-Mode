@@ -38,6 +38,8 @@ export function SettingsPage() {
       defaultBudgetGrouping: preferences.defaultBudgetGrouping,
       hideDismissedGames: preferences.hideDismissedGames,
       reduceMotion: preferences.reduceMotion,
+      browserNotifications: preferences.browserNotifications,
+      reminderDaysBefore: preferences.reminderDaysBefore,
     });
   }, [preferences]);
 
@@ -93,6 +95,26 @@ export function SettingsPage() {
     }
   };
 
+  const onExport = async (format: 'json' | 'csv') => {
+    if (!online) {
+      setError('Sin conexión: no se puede exportar.');
+      return;
+    }
+    try {
+      const res = await fetch(`/api/export/library.${format}`, { credentials: 'include' });
+      if (!res.ok) throw new Error('Export fallido');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `game-release-calendar.${format}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      setError('No se pudo exportar la biblioteca.');
+    }
+  };
+
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <header>
@@ -132,6 +154,62 @@ export function SettingsPage() {
             {coverMsg}
           </p>
         ) : null}
+        <div className="flex flex-wrap gap-2 pt-2">
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-white/15 px-3 text-sm text-ink-muted hover:bg-white/5 disabled:opacity-50"
+            disabled={!online}
+            onClick={() => void onExport('json')}
+          >
+            Exportar JSON
+          </button>
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-white/15 px-3 text-sm text-ink-muted hover:bg-white/5 disabled:opacity-50"
+            disabled={!online}
+            onClick={() => void onExport('csv')}
+          >
+            Exportar CSV
+          </button>
+        </div>
+      </section>
+
+      <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">
+        <h3 className="text-sm font-medium">Avisos del navegador</h3>
+        <p className="text-sm text-ink-muted">
+          Avisos locales de lanzamientos y pagos próximos. Sin email externo.
+        </p>
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input
+            type="checkbox"
+            checked={Boolean(draft.browserNotifications)}
+            onChange={(e) => {
+              setDraft({ ...draft, browserNotifications: e.target.checked });
+              setSaved(false);
+              if (e.target.checked && typeof Notification !== 'undefined') {
+                void Notification.requestPermission();
+              }
+            }}
+          />
+          Activar notificaciones del navegador
+        </label>
+        <div>
+          <label htmlFor="reminder-days" className="mb-1 block text-sm">
+            Avisar con antelación (días)
+          </label>
+          <input
+            id="reminder-days"
+            type="number"
+            min={1}
+            max={60}
+            className="touch-field w-full max-w-xs rounded-lg border border-white/10 bg-surface px-3"
+            value={draft.reminderDaysBefore ?? 7}
+            onChange={(e) => {
+              setDraft({ ...draft, reminderDaysBefore: Number(e.target.value) });
+              setSaved(false);
+            }}
+          />
+        </div>
       </section>
 
       <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">

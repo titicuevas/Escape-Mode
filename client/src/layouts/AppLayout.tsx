@@ -6,6 +6,7 @@ import {
   Gamepad2,
   Heart,
   Home,
+  List,
   LogOut,
   Menu,
   Settings,
@@ -14,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { useAuth } from '../providers/AuthProvider';
+import { ReminderWatcher } from '../components/ReminderWatcher';
 
 const navItems = [
   { to: '/', label: 'Inicio', icon: Home, end: true as const },
@@ -22,6 +24,7 @@ const navItems = [
   { to: '/calendar', label: 'Calendario', icon: CalendarDays },
   { to: '/reservations', label: 'Reservas', icon: ShoppingBag },
   { to: '/budget', label: 'Presupuesto', icon: Wallet },
+  { to: '/lists', label: 'Listas', icon: List },
   { to: '/interest', label: 'Interés', icon: Heart },
   { to: '/games/new', label: 'Añadir juego', icon: Gamepad2 },
   { to: '/settings', label: 'Ajustes', icon: Settings },
@@ -35,7 +38,7 @@ const primaryMobile = [
   navItems[5]!,
 ];
 
-const moreMobile = [navItems[1]!, navItems[6]!, navItems[7]!, navItems[8]!];
+const moreMobile = [navItems[1]!, navItems[6]!, navItems[7]!, navItems[8]!, navItems[9]!];
 
 function linkClass(isActive: boolean, compact = false) {
   return [
@@ -139,6 +142,7 @@ export function AppLayout() {
           className="mx-auto w-full max-w-6xl flex-1 px-3 py-5 pb-28 sm:px-5 md:px-6 md:py-6 lg:max-w-none lg:px-8 lg:pb-8"
         >
           <Outlet />
+          <ReminderWatcher />
         </main>
 
         <nav

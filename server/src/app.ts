@@ -15,6 +15,8 @@ import {
 } from './routes/finance.routes.js';
 import { rawgRouter, discoveryRouter } from './routes/rawg.routes.js';
 import { preferencesRouter } from './routes/preferences.routes.js';
+import { listsRouter } from './routes/lists.routes.js';
+import { exportRouter } from './routes/export.routes.js';
 import { errorHandler } from './middleware/error-handler.js';
 import type { Env } from './config/env.js';
 
@@ -86,6 +88,8 @@ export function createApp(env: Env) {
   app.use('/api/rawg', rawgRouter);
   app.use('/api/discovery', discoveryRouter);
   app.use('/api/preferences', preferencesRouter);
+  app.use('/api/lists', listsRouter);
+  app.use('/api/export', exportRouter);
 
   if (env.NODE_ENV === 'production') {
     const clientDist = path.resolve(__dirname, '../../client/dist');

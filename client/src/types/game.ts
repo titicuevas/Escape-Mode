@@ -80,6 +80,18 @@ export interface DashboardResponse {
   } | null;
   nextFiveReleases: Game[];
   upcomingCommittedReleases: Game[];
+  thisWeek: Array<Game & { daysRemaining: number }>;
+  thisMonth: Array<Game & { daysRemaining: number }>;
+  reminders: Array<{
+    type: 'release' | 'payment';
+    gameId: string;
+    title: string;
+    date: string | null;
+    daysRemaining: number;
+    remaining?: string;
+  }>;
+  reminderDaysBefore: number;
+  browserNotifications: boolean;
   activeReservations: Game[];
   paidGamesCount: number;
   pendingAmountThisMonth: string;

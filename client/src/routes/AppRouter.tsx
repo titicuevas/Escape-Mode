@@ -39,6 +39,9 @@ const BudgetPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('../pages/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 );
+const ListsPage = lazy(() =>
+  import('../pages/ListsPage').then((m) => ({ default: m.ListsPage })),
+);
 
 function PublicOnly({ children }: { children: ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth();
@@ -109,6 +112,14 @@ export function AppRouter() {
             element={
               <LazyPage>
                 <ReservationsPage />
+              </LazyPage>
+            }
+          />
+          <Route
+            path="lists"
+            element={
+              <LazyPage>
+                <ListsPage />
               </LazyPage>
             }
           />

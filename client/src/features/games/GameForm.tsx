@@ -428,14 +428,16 @@ export function GameForm({
 
         <div className="md:col-span-2">
           <label htmlFor="notes" className="mb-1.5 block text-sm">
-            Notas
+            Nota personal
           </label>
           <textarea
             id="notes"
             rows={4}
+            placeholder="Ej.: Steelbook en GAME, esperar oferta PSN, regalo de cumpleaños…"
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
             {...register('notes')}
           />
+          <p className="mt-1 text-xs text-ink-muted">Solo tú la ves. Ideal en español.</p>
         </div>
 
         <div className="md:col-span-2">

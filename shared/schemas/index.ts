@@ -4,6 +4,7 @@ export * from './games.js';
 export * from './finance.js';
 export * from './rawg.js';
 export * from './preferences.js';
+export * from './lists.js';
 
 export const loginSchema = z.object({
   email: z.string().email('Correo no válido').min(1, 'El correo es obligatorio'),

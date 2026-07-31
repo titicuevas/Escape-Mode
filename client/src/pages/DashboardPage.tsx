@@ -138,6 +138,93 @@ export function DashboardPage() {
         />
       </section>
 
+      <section className="grid gap-6 lg:grid-cols-2">
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-xl font-semibold tracking-tight">Esta semana</h3>
+            <span className="text-xs text-ink-muted">{data.thisWeek?.length ?? 0}</span>
+          </div>
+          {(data.thisWeek?.length ?? 0) === 0 ? (
+            <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-ink-muted">
+              Nada en los próximos 7 días.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {data.thisWeek.map((game) => (
+                <li key={game.id}>
+                  <Link
+                    to={`/games/${game.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-surface-elevated/40 px-3 py-2.5 text-sm hover:border-accent/30"
+                  >
+                    <span className="truncate font-medium">{game.title}</span>
+                    <span className="shrink-0 text-xs text-accent">
+                      {game.daysRemaining === 0 ? 'Hoy' : `${game.daysRemaining}d`}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <div>
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="font-display text-xl font-semibold tracking-tight">Este mes</h3>
+            <span className="text-xs text-ink-muted">{data.thisMonth?.length ?? 0}</span>
+          </div>
+          {(data.thisMonth?.length ?? 0) === 0 ? (
+            <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-ink-muted">
+              Sin lanzamientos este mes en tu biblioteca.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {data.thisMonth.slice(0, 8).map((game) => (
+                <li key={game.id}>
+                  <Link
+                    to={`/games/${game.id}`}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-white/10 bg-surface-elevated/40 px-3 py-2.5 text-sm hover:border-accent/30"
+                  >
+                    <span className="truncate font-medium">{game.title}</span>
+                    <span className="shrink-0 text-xs text-ink-muted">
+                      {formatDateEs(game.mainDate)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </section>
+
+      {(data.reminders?.length ?? 0) > 0 ? (
+        <section className="rounded-2xl border border-warning/25 bg-warning/5 p-4">
+          <h3 className="font-display text-lg font-semibold tracking-tight">Avisos próximos</h3>
+          <p className="mt-1 text-xs text-ink-muted">
+            Ventana de {data.reminderDaysBefore} días (ajustable en Ajustes).
+          </p>
+          <ul className="mt-3 space-y-2">
+            {data.reminders.slice(0, 6).map((r) => (
+              <li key={`${r.type}-${r.gameId}-${r.date}`}>
+                <Link
+                  to={`/games/${r.gameId}`}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-surface/40 px-3 py-2 text-sm hover:border-warning/40"
+                >
+                  <span>
+                    <span className="text-warning">
+                      {r.type === 'payment' ? 'Pago' : 'Lanzamiento'}
+                    </span>
+                    {' · '}
+                    {r.title}
+                  </span>
+                  <span className="text-xs text-ink-muted">
+                    {r.daysRemaining === 0 ? 'Hoy' : `en ${r.daysRemaining}d`}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+
       <section>
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>

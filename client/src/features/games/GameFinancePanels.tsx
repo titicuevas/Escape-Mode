@@ -211,10 +211,10 @@ export function GameFinancePanels({ game }: { game: Game }) {
 
         <section className="space-y-4 rounded-2xl border border-white/10 bg-surface-elevated/30 p-4">
           <header>
-            <h3 className="font-display text-lg font-semibold">Comparar tiendas</h3>
+            <h3 className="font-display text-lg font-semibold">Historial de precios (manual)</h3>
             <p className="mt-1 text-sm text-ink-muted">
-              Apunta precios a mano (Amazon, GAME, PSN…) para ver cuál te conviene. No se actualizan
-              solos: tú los introduces. Luego puedes «Elegir tienda» como la definitiva.
+              Anota ofertas que encuentres (Amazon, GAME, PSN…). Sin scraping: tú pones el precio.
+              Luego puedes «Elegir tienda» como la definitiva.
             </p>
             {game.targetPrice ? (
               <p className="mt-2 text-sm text-accent">

@@ -8,6 +8,8 @@ const defaults: Preferences = {
   defaultBudgetGrouping: 'RELEASE',
   hideDismissedGames: true,
   reduceMotion: false,
+  browserNotifications: false,
+  reminderDaysBefore: 7,
 };
 
 function serialize(row: {
@@ -17,6 +19,8 @@ function serialize(row: {
   defaultBudgetGrouping: Preferences['defaultBudgetGrouping'];
   hideDismissedGames: boolean;
   reduceMotion: boolean;
+  browserNotifications: boolean;
+  reminderDaysBefore: number;
 }): Preferences {
   return {
     preferredPlatforms:
@@ -28,6 +32,8 @@ function serialize(row: {
     defaultBudgetGrouping: row.defaultBudgetGrouping,
     hideDismissedGames: row.hideDismissedGames,
     reduceMotion: row.reduceMotion,
+    browserNotifications: row.browserNotifications,
+    reminderDaysBefore: row.reminderDaysBefore,
   };
 }
 
@@ -44,6 +50,8 @@ export async function getOrCreatePreferences(userId: string): Promise<Preference
       defaultBudgetGrouping: defaults.defaultBudgetGrouping,
       hideDismissedGames: defaults.hideDismissedGames,
       reduceMotion: defaults.reduceMotion,
+      browserNotifications: defaults.browserNotifications,
+      reminderDaysBefore: defaults.reminderDaysBefore,
     },
   });
   return serialize(created);
@@ -73,6 +81,12 @@ export async function updatePreferences(
         ? { hideDismissedGames: input.hideDismissedGames }
         : {}),
       ...(input.reduceMotion !== undefined ? { reduceMotion: input.reduceMotion } : {}),
+      ...(input.browserNotifications !== undefined
+        ? { browserNotifications: input.browserNotifications }
+        : {}),
+      ...(input.reminderDaysBefore !== undefined
+        ? { reminderDaysBefore: input.reminderDaysBefore }
+        : {}),
     },
   });
   return serialize(updated);

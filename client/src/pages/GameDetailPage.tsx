@@ -195,6 +195,20 @@ export function GameDetailPage() {
             </p>
           ) : null}
 
+          {game.notes ? (
+            <div className="rounded-xl border border-accent/25 bg-accent/5 px-3 py-3">
+              <h3 className="mb-1 text-sm font-medium text-accent">Nota personal</h3>
+              <p className="whitespace-pre-wrap text-sm text-ink">{game.notes}</p>
+            </div>
+          ) : (
+            <p className="text-sm text-ink-muted">
+              Sin nota personal.{' '}
+              <Link to={`/games/${game.id}/edit`} className="text-accent underline">
+                Añadir una
+              </Link>
+            </p>
+          )}
+
           {game.description ? (
             <div>
               <h3 className="mb-1 font-medium">Descripción</h3>
@@ -208,13 +222,6 @@ export function GameDetailPage() {
             ) : (
               <GameTrailers trailers={trailersQuery.data?.game.trailers} />
             )
-          ) : null}
-
-          {game.notes ? (
-            <div>
-              <h3 className="mb-1 font-medium">Notas</h3>
-              <p className="whitespace-pre-wrap text-ink-muted">{game.notes}</p>
-            </div>
           ) : null}
 
           {game.purchaseUrl ? (

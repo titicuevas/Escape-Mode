@@ -90,6 +90,7 @@ model User {
   sessions           Session[]
   discoveryDecisions DiscoveryDecision[]
   userPreferences    UserPreferences?
+  gameLists          GameList[]
 }
 
 model UserPreferences {
@@ -101,6 +102,8 @@ model UserPreferences {
   defaultBudgetGrouping  BudgetGrouping   @default(RELEASE)
   hideDismissedGames     Boolean          @default(true)
   reduceMotion           Boolean          @default(false)
+  browserNotifications   Boolean          @default(false)
+  reminderDaysBefore     Int              @default(7)
   createdAt              DateTime         @default(now())
   updatedAt              DateTime         @updatedAt
 
@@ -151,6 +154,7 @@ model Game {
   user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   offers   StoreOffer[]
   payments PaymentHistory[]
+  listItems GameListItem[]
 
   @@unique([userId, rawgId])
   @@index([userId])
@@ -159,6 +163,36 @@ model Game {
   @@index([interestStatus])
   @@index([purchaseStatus])
   @@index([selectedPlatform])
+}
+
+model GameList {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user  User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items GameListItem[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model GameListItem {
+  id      String   @id @default(uuid()) @db.Uuid
+  listId  String   @db.Uuid
+  gameId  String   @db.Uuid
+  note    String?
+  addedAt DateTime @default(now())
+
+  list GameList @relation(fields: [listId], references: [id], onDelete: Cascade)
+  game Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+
+  @@unique([listId, gameId])
+  @@index([listId])
+  @@index([gameId])
 }
 
 model StoreOffer {

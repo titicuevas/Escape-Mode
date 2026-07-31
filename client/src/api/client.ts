@@ -146,6 +146,38 @@ export const api = {
     request<{ scanned: number; updated: number }>('/api/games/actions/backfill-covers', {
       method: 'POST',
     }),
+  listGameLists: () =>
+    request<{ lists: Array<{ id: string; name: string; description: string | null; itemCount: number }> }>(
+      '/api/lists',
+    ),
+  getGameList: (listId: string) =>
+    request<{
+      list: {
+        id: string;
+        name: string;
+        description: string | null;
+        itemCount: number;
+        items: Array<{ id: string; note: string | null; addedAt: string; game: Game }>;
+      };
+    }>(`/api/lists/${listId}`),
+  createGameList: (body: { name: string; description?: string | null }) =>
+    request<{ list: { id: string; name: string } }>('/api/lists', {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  updateGameList: (listId: string, body: { name?: string; description?: string | null }) =>
+    request<{ list: { id: string; name: string } }>(`/api/lists/${listId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  deleteGameList: (listId: string) => request<void>(`/api/lists/${listId}`, { method: 'DELETE' }),
+  addGameToList: (listId: string, body: { gameId: string; note?: string | null }) =>
+    request<{ list: unknown }>(`/api/lists/${listId}/games`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+  removeGameFromList: (listId: string, gameId: string) =>
+    request<{ list: unknown }>(`/api/lists/${listId}/games/${gameId}`, { method: 'DELETE' }),
 };
 
 export { ApiError };

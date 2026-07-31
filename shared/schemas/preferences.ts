@@ -11,6 +11,8 @@ export const preferencesSchema = z.object({
   defaultBudgetGrouping: budgetGroupingEnum.default('RELEASE'),
   hideDismissedGames: z.boolean().default(true),
   reduceMotion: z.boolean().default(false),
+  browserNotifications: z.boolean().default(false),
+  reminderDaysBefore: z.number().int().min(1).max(60).default(7),
 });
 
 export const preferencesUpdateSchema = preferencesSchema.partial();
