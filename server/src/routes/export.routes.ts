@@ -6,6 +6,7 @@ import type { AuthenticatedRequest } from '../types/express.js';
 import { AppError } from '../utils/errors.js';
 import { exportLibrary, libraryToCsv } from '../services/export.service.js';
 import { importLibrary } from '../services/import.service.js';
+import { exportLibraryIcs } from '../services/ics.service.js';
 
 export const exportRouter = Router();
 exportRouter.use(requireAuth);
@@ -35,6 +36,18 @@ exportRouter.get('/library.csv', async (req, res, next) => {
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="game-release-calendar.csv"');
     res.send(csv);
+  } catch (error) {
+    next(error);
+  }
+});
+
+exportRouter.get('/library.ics', async (req, res, next) => {
+  try {
+    const user = requireUser(req);
+    const ics = await exportLibraryIcs(user.id);
+    res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="escape-mode.ics"');
+    res.send(ics);
   } catch (error) {
     next(error);
   }

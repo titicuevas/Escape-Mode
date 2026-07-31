@@ -96,6 +96,30 @@ export function CalendarPage() {
             Usa la fecha principal (acceso anticipado si está activado).
           </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            className="min-h-10 rounded-lg border border-focus/40 px-3 text-sm text-focus hover:bg-focus/10"
+            onClick={() => {
+              void (async () => {
+                try {
+                  const res = await fetch('/api/export/library.ics', { credentials: 'include' });
+                  if (!res.ok) throw new Error('fail');
+                  const blob = await res.blob();
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = 'escape-mode.ics';
+                  a.click();
+                  URL.revokeObjectURL(url);
+                } catch {
+                  /* ignore */
+                }
+              })();
+            }}
+          >
+            Descargar .ics
+          </button>
         <div className="flex rounded-lg border border-white/10 p-1" role="tablist" aria-label="Vista">
           <button
             type="button"
@@ -115,6 +139,7 @@ export function CalendarPage() {
           >
             Línea temporal
           </button>
+        </div>
         </div>
       </header>
 

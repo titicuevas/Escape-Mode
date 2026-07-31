@@ -150,19 +150,22 @@ export function SettingsPage() {
     }
   };
 
-  const onExport = async (format: 'json' | 'csv') => {
+  const onExport = async (format: 'json' | 'csv' | 'ics') => {
     if (!online) {
       setError('Sin conexión: no se puede exportar.');
       return;
     }
     try {
-      const res = await fetch(`/api/export/library.${format}`, { credentials: 'include' });
+      const path =
+        format === 'ics' ? '/api/export/library.ics' : `/api/export/library.${format}`;
+      const res = await fetch(path, { credentials: 'include' });
       if (!res.ok) throw new Error('Export fallido');
       const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `game-release-calendar.${format}`;
+      a.download =
+        format === 'ics' ? 'escape-mode.ics' : `game-release-calendar.${format}`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
@@ -194,7 +197,8 @@ export function SettingsPage() {
       <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">
         <h3 className="text-sm font-medium">Biblioteca</h3>
         <p className="text-sm text-ink-muted">
-          Portadas, fechas (oficiales conocidas + RAWG) y copia de seguridad.
+          Portadas, fechas (oficiales conocidas + RAWG) y copia de seguridad. El .ics se importa en
+          Google Calendar, Apple Calendar u Outlook.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -240,6 +244,14 @@ export function SettingsPage() {
             onClick={() => void onExport('csv')}
           >
             Exportar CSV
+          </button>
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-focus/40 px-3 text-sm text-focus hover:bg-focus/10 disabled:opacity-50"
+            disabled={!online}
+            onClick={() => void onExport('ics')}
+          >
+            Exportar calendario (.ics)
           </button>
           <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-white/15 px-3 text-sm text-ink-muted hover:bg-white/5 has-[:disabled]:opacity-50">
             <input
