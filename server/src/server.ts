@@ -2,6 +2,7 @@ import { loadEnv } from './config/env.js';
 import { createApp } from './app.js';
 import { cleanupExpiredSessions } from './services/auth.service.js';
 import { backfillKnownCovers } from './services/covers.service.js';
+import { backfillKnownOfficialDates } from './services/metadata.service.js';
 
 async function main() {
   const env = loadEnv();
@@ -16,6 +17,13 @@ async function main() {
   void backfillKnownCovers()
     .then((n) => {
       if (n > 0) console.log(`Portadas rellenadas automáticamente: ${n}`);
+    })
+    .catch(() => undefined);
+
+  // Fechas oficiales conocidas (GTA, FC Ultimate, etc.)
+  void backfillKnownOfficialDates()
+    .then((n) => {
+      if (n > 0) console.log(`Fechas oficiales corregidas automáticamente: ${n}`);
     })
     .catch(() => undefined);
 

@@ -3,6 +3,7 @@ import { gameCreateSchema, gameUpdateSchema, gamesQuerySchema } from '@grc/share
 import type { AuthenticatedRequest } from '../types/express.js';
 import * as gamesService from '../services/games.service.js';
 import { backfillMissingCovers } from '../services/covers.service.js';
+import { refreshMetadataFromRawg } from '../services/metadata.service.js';
 import { getOrCreatePreferences } from '../services/preferences.service.js';
 import { AppError } from '../utils/errors.js';
 
@@ -75,6 +76,17 @@ export async function backfillCovers(req: Request, res: Response, next: NextFunc
   try {
     const user = requireUser(req);
     const result = await backfillMissingCovers(user.id);
+    res.json(result);
+  } catch (error) {
+    next(error);
+  }
+}
+
+export async function refreshMetadata(req: Request, res: Response, next: NextFunction) {
+  try {
+    const user = requireUser(req);
+    const gameId = typeof req.body?.gameId === 'string' ? req.body.gameId : undefined;
+    const result = await refreshMetadataFromRawg(user.id, { gameId });
     res.json(result);
   } catch (error) {
     next(error);

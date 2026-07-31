@@ -141,7 +141,9 @@ export function AppLayout() {
           tabIndex={-1}
           className="mx-auto w-full max-w-6xl flex-1 px-3 py-5 pb-28 sm:px-5 md:px-6 md:py-6 lg:max-w-none lg:px-8 lg:pb-8"
         >
-          <Outlet />
+          <div key={location.pathname} className="page-enter">
+            <Outlet />
+          </div>
           <ReminderWatcher />
         </main>
 

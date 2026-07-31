@@ -28,6 +28,10 @@ export function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [coverMsg, setCoverMsg] = useState<string | null>(null);
   const [covering, setCovering] = useState(false);
+  const [metaMsg, setMetaMsg] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [importMsg, setImportMsg] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
 
   useEffect(() => {
     if (!preferences) return;
@@ -95,6 +99,57 @@ export function SettingsPage() {
     }
   };
 
+  const onRefreshMetadata = async () => {
+    if (!online) {
+      setError('Sin conexión: no se pueden actualizar fechas.');
+      return;
+    }
+    setRefreshing(true);
+    setMetaMsg(null);
+    setError(null);
+    try {
+      const result = await api.refreshMetadata();
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setMetaMsg(
+        `Revisados ${result.scanned}. Actualizados ${result.updated}` +
+          (result.skippedOfficial ? ` (${result.skippedOfficial} con fecha oficial protegida)` : '') +
+          (result.failed ? `. Fallidos: ${result.failed}` : '') +
+          '.',
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudieron actualizar las fechas.');
+    } finally {
+      setRefreshing(false);
+    }
+  };
+
+  const onImportFile = async (file: File) => {
+    if (!online) {
+      setError('Sin conexión: no se puede importar.');
+      return;
+    }
+    setImporting(true);
+    setImportMsg(null);
+    setError(null);
+    try {
+      const text = await file.text();
+      const result = await api.importLibrary({ text, mode: 'merge' });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      setImportMsg(
+        `Importados: ${result.created} nuevos, ${result.updated} actualizados` +
+          (result.skipped ? `, ${result.skipped} omitidos` : '') +
+          (result.errors.length ? `. Avisos: ${result.errors.slice(0, 3).join('; ')}` : '') +
+          '.',
+      );
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo importar la biblioteca.');
+    } finally {
+      setImporting(false);
+    }
+  };
+
   const onExport = async (format: 'json' | 'csv') => {
     if (!online) {
       setError('Sin conexión: no se puede exportar.');
@@ -139,19 +194,34 @@ export function SettingsPage() {
       <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">
         <h3 className="text-sm font-medium">Biblioteca</h3>
         <p className="text-sm text-ink-muted">
-          Si ves monogramas en lugar de carátulas, rellena las portadas faltantes desde RAWG.
+          Portadas, fechas (oficiales conocidas + RAWG) y copia de seguridad.
         </p>
-        <button
-          type="button"
-          className="min-h-11 rounded-lg border border-accent/40 px-3 text-sm text-accent hover:bg-accent/10 disabled:opacity-50"
-          disabled={covering || !online}
-          onClick={() => void onBackfillCovers()}
-        >
-          {covering ? 'Buscando portadas…' : 'Rellenar portadas faltantes'}
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-accent/40 px-3 text-sm text-accent hover:bg-accent/10 disabled:opacity-50"
+            disabled={covering || !online}
+            onClick={() => void onBackfillCovers()}
+          >
+            {covering ? 'Buscando portadas…' : 'Rellenar portadas faltantes'}
+          </button>
+          <button
+            type="button"
+            className="min-h-11 rounded-lg border border-focus/40 px-3 text-sm text-focus hover:bg-focus/10 disabled:opacity-50"
+            disabled={refreshing || !online}
+            onClick={() => void onRefreshMetadata()}
+          >
+            {refreshing ? 'Actualizando fechas…' : 'Actualizar fechas desde RAWG'}
+          </button>
+        </div>
         {coverMsg ? (
           <p className="text-sm text-success" role="status">
             {coverMsg}
+          </p>
+        ) : null}
+        {metaMsg ? (
+          <p className="text-sm text-success" role="status">
+            {metaMsg}
           </p>
         ) : null}
         <div className="flex flex-wrap gap-2 pt-2">
@@ -171,7 +241,26 @@ export function SettingsPage() {
           >
             Exportar CSV
           </button>
+          <label className="inline-flex min-h-11 cursor-pointer items-center rounded-lg border border-white/15 px-3 text-sm text-ink-muted hover:bg-white/5 has-[:disabled]:opacity-50">
+            <input
+              type="file"
+              accept=".json,.csv,application/json,text/csv"
+              className="sr-only"
+              disabled={importing || !online}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                e.target.value = '';
+                if (file) void onImportFile(file);
+              }}
+            />
+            {importing ? 'Importando…' : 'Importar JSON/CSV'}
+          </label>
         </div>
+        {importMsg ? (
+          <p className="text-sm text-success" role="status">
+            {importMsg}
+          </p>
+        ) : null}
       </section>
 
       <section className="space-y-3 rounded-xl border border-white/10 bg-surface-elevated/40 p-4">

@@ -146,6 +146,24 @@ export const api = {
     request<{ scanned: number; updated: number }>('/api/games/actions/backfill-covers', {
       method: 'POST',
     }),
+  refreshMetadata: (body?: { gameId?: string }) =>
+    request<{
+      scanned: number;
+      updated: number;
+      skippedOfficial: number;
+      failed: number;
+    }>('/api/games/actions/refresh-metadata', {
+      method: 'POST',
+      body: JSON.stringify(body ?? {}),
+    }),
+  importLibrary: (body: { text?: string; payload?: unknown; mode?: 'merge' | 'skip' }) =>
+    request<{ created: number; updated: number; skipped: number; errors: string[] }>(
+      '/api/export/library/import',
+      {
+        method: 'POST',
+        body: JSON.stringify(body),
+      },
+    ),
   listGameLists: () =>
     request<{ lists: Array<{ id: string; name: string; description: string | null; itemCount: number }> }>(
       '/api/lists',

@@ -7,7 +7,7 @@ export function GameCard({ game }: { game: Game }) {
   return (
     <Link
       to={`/games/${game.id}`}
-      className="group overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated/80 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition duration-300 hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_12px_40px_-20px_rgba(94,234,212,0.45)]"
+      className="group card-enter overflow-hidden rounded-2xl border border-white/10 bg-surface-elevated/80 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] transition duration-300 hover:-translate-y-0.5 hover:border-accent/35 hover:shadow-[0_12px_40px_-20px_rgba(94,234,212,0.45)]"
     >
       <div className="relative aspect-[3/4] overflow-hidden bg-surface">
         <CoverImage

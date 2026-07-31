@@ -67,6 +67,19 @@ export function GameDetailPage() {
     },
   });
 
+  const refreshMutation = useMutation({
+    mutationFn: () => api.refreshMetadata({ gameId: id }),
+    onSuccess: async () => {
+      setError(null);
+      await queryClient.invalidateQueries({ queryKey: ['games', id] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+    },
+    onError: (err) => {
+      setError(err instanceof ApiError ? err.message : 'No se pudo actualizar la fecha');
+    },
+  });
+
   if (query.isLoading) return <PageSkeleton />;
   if (query.isError || !query.data) {
     return (
@@ -96,6 +109,14 @@ export function GameDetailPage() {
             onClick={() => coverMutation.mutate()}
           >
             {coverMutation.isPending ? 'Buscando…' : 'Buscar portada RAWG'}
+          </button>
+          <button
+            type="button"
+            className="rounded-lg border border-focus/40 px-3 py-2 text-sm text-focus hover:bg-focus/10 disabled:opacity-50"
+            disabled={refreshMutation.isPending}
+            onClick={() => refreshMutation.mutate()}
+          >
+            {refreshMutation.isPending ? 'Actualizando…' : 'Actualizar fecha RAWG'}
           </button>
           <Link
             to={`/games/${game.id}/edit`}
