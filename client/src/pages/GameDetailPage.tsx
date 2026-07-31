@@ -241,8 +241,37 @@ export function GameDetailPage() {
             trailersQuery.isLoading ? (
               <p className="text-sm text-ink-muted">Buscando trailer…</p>
             ) : (
-              <GameTrailers trailers={trailersQuery.data?.game.trailers} />
+              <GameTrailers
+                trailers={trailersQuery.data?.game.trailers}
+                gameTitle={game.title}
+                rawgUrl={trailersQuery.data?.game.rawgUrl ?? game.rawgUrl}
+              />
             )
+          ) : null}
+
+          {game.metacritic != null || (trailersQuery.data?.game.rating != null && trailersQuery.data.game.rating > 0) ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+              <p>
+                Metacritic:{' '}
+                {game.metacritic != null ? (
+                  <span className="font-semibold text-accent">{game.metacritic}/100</span>
+                ) : trailersQuery.data?.game.metacritic != null ? (
+                  <span className="font-semibold text-accent">
+                    {trailersQuery.data.game.metacritic}/100
+                  </span>
+                ) : (
+                  <span className="text-ink-muted">sin nota aún</span>
+                )}
+              </p>
+              {trailersQuery.data?.game.rating != null && trailersQuery.data.game.rating > 0 ? (
+                <p>
+                  Comunidad RAWG:{' '}
+                  <span className="font-semibold text-focus">
+                    {trailersQuery.data.game.rating.toFixed(1)}/5
+                  </span>
+                </p>
+              ) : null}
+            </div>
           ) : null}
 
           {game.purchaseUrl ? (

@@ -121,6 +121,24 @@ describe('normalizeRawgTrailers', () => {
   });
 });
 
+describe('normalizeRawgYoutube', () => {
+  it('convierte external_id en embed de YouTube', () => {
+    const trailers = normalizeRawgYoutube({
+      results: [
+        {
+          id: 9,
+          external_id: 'dQw4w9WgXcQ',
+          name: 'Official Trailer',
+          thumbnails: { high: { url: 'https://img.example/h.jpg' } },
+        },
+      ],
+    });
+    expect(trailers).toHaveLength(1);
+    expect(trailers[0]?.embedUrl).toContain('youtube-nocookie.com/embed/dQw4w9WgXcQ');
+    expect(trailers[0]?.previewUrl).toBe('https://img.example/h.jpg');
+  });
+});
+
 describe('mapGenreNamesToRawgIds / tasteOverlapScore', () => {
   it('mapea géneros conocidos a IDs RAWG', () => {
     expect(mapGenreNamesToRawgIds(['Action', 'RPG', 'Desconocido'])).toEqual([4, 5]);

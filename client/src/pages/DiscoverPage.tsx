@@ -500,9 +500,13 @@ export function DiscoverPage() {
                 }}
               >
                 <option value="released">Fecha de lanzamiento</option>
-                <option value="-rating">Popularidad</option>
-                <option value="-metacritic">Metacritic</option>
+                <option value="-rating">Popularidad (nota comunidad RAWG)</option>
+                <option value="-metacritic">Nota Metacritic (crítica)</option>
               </select>
+              <p className="mt-1 text-[11px] text-ink-muted">
+                Popularidad = votos de usuarios en RAWG (0–5). Metacritic = nota de crítica
+                (0–100); muchos no lanzados aún no tienen.
+              </p>
             </div>
           </div>
         </div>
@@ -605,11 +609,24 @@ export function DiscoverPage() {
               {current.platforms.slice(0, 4).join(' · ') || 'Sin plataformas'}
             </p>
             <p className="text-ink-muted">{current.genres.slice(0, 4).join(' · ')}</p>
-            {current.metacritic != null ? (
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
               <p>
-                Metacritic: <span className="font-semibold text-accent">{current.metacritic}</span>
+                Metacritic:{' '}
+                {current.metacritic != null ? (
+                  <span className="font-semibold text-accent">{current.metacritic}/100</span>
+                ) : (
+                  <span className="text-ink-muted">sin nota aún</span>
+                )}
               </p>
-            ) : null}
+              <p>
+                Comunidad RAWG:{' '}
+                {current.rating != null && current.rating > 0 ? (
+                  <span className="font-semibold text-focus">{current.rating.toFixed(1)}/5</span>
+                ) : (
+                  <span className="text-ink-muted">sin votos aún</span>
+                )}
+              </p>
+            </div>
             <button
               type="button"
               className="flex min-h-11 w-full items-center justify-center rounded-xl border border-accent/40 bg-accent/10 px-3 text-sm font-medium text-accent hover:bg-accent/15 disabled:opacity-50"
@@ -700,7 +717,31 @@ export function DiscoverPage() {
               <PageSkeleton label="Cargando detalles" />
             ) : (
               <div className="space-y-4">
-                <GameTrailers trailers={detail?.trailers} />
+                <GameTrailers
+                  trailers={detail?.trailers}
+                  gameTitle={detail?.title ?? current?.title}
+                  rawgUrl={detail?.rawgUrl}
+                />
+                {(detail?.metacritic != null || (detail?.rating != null && detail.rating > 0)) ? (
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                    <p>
+                      Metacritic:{' '}
+                      {detail?.metacritic != null ? (
+                        <span className="font-semibold text-accent">{detail.metacritic}/100</span>
+                      ) : (
+                        <span className="text-ink-muted">sin nota aún</span>
+                      )}
+                    </p>
+                    <p>
+                      Comunidad RAWG:{' '}
+                      {detail?.rating != null && detail.rating > 0 ? (
+                        <span className="font-semibold text-focus">{detail.rating.toFixed(1)}/5</span>
+                      ) : (
+                        <span className="text-ink-muted">sin votos aún</span>
+                      )}
+                    </p>
+                  </div>
+                ) : null}
                 {detail?.description ? (
                   <div>
                     <h4 className="mb-1 text-sm font-medium">Descripción</h4>

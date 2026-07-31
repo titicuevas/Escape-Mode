@@ -6,6 +6,7 @@ import {
   normalizeRawgDetail,
   normalizeRawgListItem,
   normalizeRawgTrailers,
+  normalizeRawgYoutube,
   RAWG_PLATFORM_IDS,
   tasteOverlapScore,
   type NormalizedRawgGame,
@@ -100,17 +101,22 @@ export class RawgService {
   }
 
   async getGame(rawgId: number): Promise<NormalizedRawgGame> {
-    const [data, movies] = await Promise.all([
+    const [data, movies, youtube] = await Promise.all([
       rawgFetch(`/games/${rawgId}`, {}) as Promise<Record<string, unknown>>,
       rawgFetch(`/games/${rawgId}/movies`, {}).catch(() => ({ results: [] })),
+      rawgFetch(`/games/${rawgId}/youtube`, {}).catch(() => ({ results: [] })),
     ]);
     const normalized = normalizeRawgDetail(data);
     if (!normalized) {
       throw new AppError(404, 'Juego no encontrado en RAWG');
     }
+    const fromMovies = normalizeRawgTrailers(movies);
+    const fromYoutube = normalizeRawgYoutube(youtube);
+    // Preferir MP4 de RAWG; completar con YouTube si hace falta
+    const trailers = [...fromMovies, ...fromYoutube].slice(0, 3);
     return {
       ...normalized,
-      trailers: normalizeRawgTrailers(movies),
+      trailers,
     };
   }
 

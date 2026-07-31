@@ -5,6 +5,7 @@ export interface RawgTrailer {
   name: string;
   previewUrl: string | null;
   videoUrl: string | null;
+  embedUrl?: string | null;
 }
 
 export interface RawgGameCard {

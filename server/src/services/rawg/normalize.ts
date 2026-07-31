@@ -142,6 +142,7 @@ export type RawgTrailer = {
   name: string;
   previewUrl: string | null;
   videoUrl: string | null;
+  embedUrl?: string | null;
 };
 
 export function normalizeRawgTrailers(raw: unknown): RawgTrailer[] {
@@ -176,6 +177,53 @@ export function normalizeRawgTrailers(raw: unknown): RawgTrailer[] {
       name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : 'Trailer',
       previewUrl: typeof row.preview === 'string' ? row.preview : null,
       videoUrl,
+    });
+    if (trailers.length >= 3) break;
+  }
+  return trailers;
+}
+
+/** Vídeos de /games/{id}/youtube (si la API lo permite en tu plan). */
+export function normalizeRawgYoutube(raw: unknown): RawgTrailer[] {
+  if (!raw || typeof raw !== 'object') return [];
+  const results = Array.isArray((raw as { results?: unknown }).results)
+    ? ((raw as { results: unknown[] }).results)
+    : [];
+
+  const trailers: RawgTrailer[] = [];
+  for (const item of results) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as {
+      id?: unknown;
+      external_id?: unknown;
+      name?: unknown;
+      thumbnails?: unknown;
+    };
+    const id = Number(row.id);
+    const externalId =
+      typeof row.external_id === 'string' && /^[\w-]{6,}$/.test(row.external_id)
+        ? row.external_id
+        : null;
+    if (!Number.isFinite(id) || !externalId) continue;
+
+    let previewUrl: string | null = null;
+    if (row.thumbnails && typeof row.thumbnails === 'object') {
+      const thumbs = row.thumbnails as Record<string, unknown>;
+      const high = thumbs.high && typeof thumbs.high === 'object'
+        ? (thumbs.high as { url?: string }).url
+        : null;
+      const medium = thumbs.medium && typeof thumbs.medium === 'object'
+        ? (thumbs.medium as { url?: string }).url
+        : null;
+      previewUrl = high || medium || null;
+    }
+
+    trailers.push({
+      id,
+      name: typeof row.name === 'string' && row.name.trim() ? row.name.trim() : 'YouTube',
+      previewUrl,
+      videoUrl: `https://www.youtube.com/watch?v=${externalId}`,
+      embedUrl: `https://www.youtube-nocookie.com/embed/${externalId}`,
     });
     if (trailers.length >= 3) break;
   }

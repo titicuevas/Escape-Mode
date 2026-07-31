@@ -40,6 +40,7 @@ export function createApp(env: Env) {
                 styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
                 imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
                 mediaSrc: ["'self'", 'https:', 'blob:'],
+                frameSrc: ["'self'", 'https://www.youtube.com', 'https://www.youtube-nocookie.com'],
                 connectSrc: ["'self'"],
                 fontSrc: ["'self'", 'data:', 'https://fonts.gstatic.com'],
                 workerSrc: ["'self'", 'blob:'],
