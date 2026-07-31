@@ -106,5 +106,6 @@ export interface DashboardResponse {
   thinkingGames: Game[];
   nowPlaying: Game[];
   playBacklog: Game[];
+  playBacklogTotal: number;
   playQueueCount: number;
 }

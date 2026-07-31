@@ -47,6 +47,7 @@ export function CalendarPage() {
   );
   const [cursor, setCursor] = useState(() => startOfMonth(new Date()));
   const [prefsApplied, setPrefsApplied] = useState(false);
+  const [icsError, setIcsError] = useState<string | null>(null);
 
   useEffect(() => {
     if (prefsApplied || !preferences) return;
@@ -104,7 +105,7 @@ export function CalendarPage() {
               void (async () => {
                 try {
                   const res = await fetch('/api/export/library.ics', { credentials: 'include' });
-                  if (!res.ok) throw new Error('fail');
+                  if (!res.ok) throw new Error('No se pudo descargar el calendario');
                   const blob = await res.blob();
                   const url = URL.createObjectURL(blob);
                   const a = document.createElement('a');
@@ -112,8 +113,11 @@ export function CalendarPage() {
                   a.download = 'escape-mode.ics';
                   a.click();
                   URL.revokeObjectURL(url);
-                } catch {
-                  /* ignore */
+                  setIcsError(null);
+                } catch (err) {
+                  setIcsError(
+                    err instanceof Error ? err.message : 'No se pudo descargar el .ics',
+                  );
                 }
               })();
             }}
@@ -142,6 +146,12 @@ export function CalendarPage() {
         </div>
         </div>
       </header>
+
+      {icsError ? (
+        <p className="text-sm text-danger" role="alert">
+          {icsError}
+        </p>
+      ) : null}
 
       {view === 'month' ? (
         <section className="space-y-3 sm:space-y-4">

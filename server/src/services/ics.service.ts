@@ -153,10 +153,12 @@ export async function exportLibraryIcs(userId: string): Promise<string> {
     if (game.paymentDeadline) {
       const remaining = calculateRemainingAmount(game.totalPrice, game.amountPaid);
       const remainingNum = remaining != null ? toNumber(remaining) : null;
+      const inPaymentPipeline = ['RESERVED', 'PARTIALLY_PAID', 'WAITING_OFFER'].includes(
+        game.purchaseStatus,
+      );
       const stillOwes =
-        remainingNum == null ||
-        remainingNum > 0 ||
-        ['RESERVED', 'PARTIALLY_PAID', 'WAITING_OFFER'].includes(game.purchaseStatus);
+        (remainingNum != null && remainingNum > 0) ||
+        (inPaymentPipeline && (remainingNum == null || remainingNum > 0));
 
       if (stillOwes) {
         events.push({

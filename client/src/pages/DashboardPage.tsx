@@ -75,6 +75,9 @@ export function DashboardPage() {
           </div>
           <span className="rounded-lg border border-white/10 bg-surface/40 px-2.5 py-1 text-xs text-ink-muted">
             {data.playQueueCount ?? nowPlaying.length + playBacklog.length} en cola
+            {(data.playBacklogTotal ?? 0) > playBacklog.length
+              ? ` · mostrando ${playBacklog.length}`
+              : ''}
           </span>
         </div>
 
@@ -199,7 +202,7 @@ export function DashboardPage() {
           }
         />
         <Kpi
-          label="Juegos pagados"
+          label="En posesión"
           value={String(data.paidGamesCount)}
           hint={
             <Link to="/budget" className="inline-flex items-center gap-1 text-accent">

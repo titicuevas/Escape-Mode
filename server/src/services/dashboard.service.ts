@@ -72,7 +72,9 @@ export async function getDashboard(userId: string) {
   const activeReservations = games.filter((g) =>
     ['RESERVED', 'PARTIALLY_PAID', 'WAITING_OFFER'].includes(g.purchaseStatus),
   );
-  const paidGames = games.filter((g) => g.purchaseStatus === 'PAID');
+  const paidGames = games.filter((g) =>
+    ['PAID', 'RECEIVED', 'PLAYING', 'COMPLETED'].includes(g.purchaseStatus),
+  );
   const thinking = games.filter((g) => g.interestStatus === 'THINKING');
   const pendingReview = games.filter((g) => g.interestStatus === 'THINKING').length;
 
@@ -89,20 +91,18 @@ export async function getDashboard(userId: string) {
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .map(serializeGame);
 
-  /** Cola: recibidos o pagados esperando empezar (sin estar jugando aún). */
-  const playBacklog = games
+  const backlogAll = games
     .filter((g) => g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID')
     .sort((a, b) => {
       const ir = interestRank(a.interestStatus) - interestRank(b.interestStatus);
       if (ir !== 0) return ir;
       return b.updatedAt.getTime() - a.updatedAt.getTime();
-    })
-    .slice(0, 12)
-    .map(serializeGame);
+    });
 
-  const playQueueCount =
-    games.filter((g) => g.purchaseStatus === 'PLAYING').length +
-    games.filter((g) => g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID').length;
+  /** Cola visible (tope 12) + total real para el badge. */
+  const playBacklog = backlogAll.slice(0, 12).map(serializeGame);
+  const playBacklogTotal = backlogAll.length;
+  const playQueueCount = nowPlaying.length + playBacklogTotal;
 
   const interestCounts = {
     MUST_BUY: games.filter((g) => g.interestStatus === 'MUST_BUY').length,
@@ -199,6 +199,7 @@ export async function getDashboard(userId: string) {
     thinkingGames: thinking.slice(0, 6).map(serializeGame),
     nowPlaying,
     playBacklog,
+    playBacklogTotal,
     playQueueCount,
   };
 }

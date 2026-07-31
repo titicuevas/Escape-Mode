@@ -26,6 +26,18 @@ function datesEqual(a: Date | null, b: Date | null): boolean {
   return toDateOnlyString(a) === toDateOnlyString(b);
 }
 
+async function canAssignRawgId(
+  userId: string,
+  gameId: string,
+  rawgId: number,
+): Promise<boolean> {
+  const clash = await prisma.game.findFirst({
+    where: { userId, rawgId, NOT: { id: gameId } },
+    select: { id: true },
+  });
+  return !clash;
+}
+
 /** Aplica fechas oficiales del mapa conocido. No llama a RAWG. */
 export async function backfillKnownOfficialDates(userId?: string): Promise<number> {
   let updated = 0;
@@ -159,7 +171,10 @@ export async function refreshMetadataFromRawg(
               data.coverUrl = detail.coverUrl;
               data.backgroundUrl = detail.backgroundUrl ?? detail.coverUrl;
             }
-            if (!game.rawgId) {
+            if (
+              !game.rawgId &&
+              (await canAssignRawgId(userId, game.id, detail.rawgId))
+            ) {
               data.rawgId = detail.rawgId;
               data.slug = detail.slug ?? undefined;
               data.rawgUrl = detail.rawgUrl ?? undefined;
@@ -170,8 +185,12 @@ export async function refreshMetadataFromRawg(
         }
       }
 
-      await prisma.game.update({ where: { id: game.id }, data });
-      updated += 1;
+      try {
+        await prisma.game.update({ where: { id: game.id }, data });
+        updated += 1;
+      } catch {
+        failed += 1;
+      }
       continue;
     }
 
@@ -200,7 +219,6 @@ export async function refreshMetadataFromRawg(
     if (protectDates) skippedOfficial += 1;
 
     const data: Prisma.GameUpdateInput = {
-      rawgId: detail.rawgId,
       slug: detail.slug ?? game.slug,
       rawgUrl: detail.rawgUrl ?? game.rawgUrl,
       platforms: detail.platforms.length ? detail.platforms : game.platforms,
@@ -213,6 +231,14 @@ export async function refreshMetadataFromRawg(
       metacritic: detail.metacritic ?? game.metacritic,
       officialUrl: detail.officialUrl ?? game.officialUrl,
     };
+
+    if (
+      detail.rawgId &&
+      (game.rawgId === detail.rawgId ||
+        (await canAssignRawgId(userId, game.id, detail.rawgId)))
+    ) {
+      data.rawgId = detail.rawgId;
+    }
 
     if (!game.coverUrl && detail.coverUrl) {
       data.coverUrl = detail.coverUrl;
@@ -230,8 +256,12 @@ export async function refreshMetadataFromRawg(
       data.dateSource = 'RAWG';
     }
 
-    await prisma.game.update({ where: { id: game.id }, data });
-    updated += 1;
+    try {
+      await prisma.game.update({ where: { id: game.id }, data });
+      updated += 1;
+    } catch {
+      failed += 1;
+    }
   }
 
   return {

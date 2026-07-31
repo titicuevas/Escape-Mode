@@ -1,4 +1,9 @@
-import type { InterestStatus, MediaFormat, Prisma, PurchaseStatus } from '@prisma/client';
+import type {
+  InterestStatus,
+  MediaFormat,
+  PaymentType,
+  PurchaseStatus,
+} from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
 import { decimalFrom } from '../utils/money.js';
@@ -22,12 +27,20 @@ const PURCHASE = new Set([
   'COMPLETED',
 ]);
 const MEDIA = new Set(['PHYSICAL', 'DIGITAL', 'UNKNOWN']);
+const PAYMENT_TYPES = new Set(['RESERVATION', 'PAYMENT', 'REFUND', 'ADJUSTMENT']);
 
 export type ImportResult = {
   created: number;
   updated: number;
   skipped: number;
   errors: string[];
+};
+
+type ImportPayment = {
+  amount?: unknown;
+  paymentDate?: unknown;
+  paymentType?: unknown;
+  notes?: unknown;
 };
 
 type ImportGameRow = {
@@ -49,6 +62,7 @@ type ImportGameRow = {
   notes?: unknown;
   purchaseUrl?: unknown;
   useEarlyAccessAsMainDate?: unknown;
+  payments?: ImportPayment[];
 };
 
 function asString(v: unknown): string | null {
@@ -83,6 +97,21 @@ function asPurchase(v: unknown): PurchaseStatus {
 function asMedia(v: unknown): MediaFormat {
   const s = asString(v);
   return s && MEDIA.has(s) ? (s as MediaFormat) : 'UNKNOWN';
+}
+
+/** true/false estricto; undefined si no viene o no se entiende. */
+function asBool(v: unknown): boolean | undefined {
+  if (v === undefined || v === null || v === '') return undefined;
+  if (typeof v === 'boolean') return v;
+  const s = String(v).trim().toLowerCase();
+  if (['true', '1', 'yes', 'si', 'sí'].includes(s)) return true;
+  if (['false', '0', 'no'].includes(s)) return false;
+  return undefined;
+}
+
+function asPaymentType(v: unknown): PaymentType {
+  const s = asString(v);
+  return s && PAYMENT_TYPES.has(s) ? (s as PaymentType) : 'PAYMENT';
 }
 
 function parseCsv(text: string): ImportGameRow[] {
@@ -147,6 +176,45 @@ function extractGames(payload: unknown): ImportGameRow[] {
   throw new AppError(400, 'Formato de importación no válido. Usa el JSON/CSV exportado.');
 }
 
+async function importPaymentsIfNeeded(
+  gameId: string,
+  payments: ImportPayment[] | undefined,
+  onlyIfEmpty: boolean,
+) {
+  if (!payments?.length) return;
+  if (onlyIfEmpty) {
+    const count = await prisma.paymentHistory.count({ where: { gameId } });
+    if (count > 0) return;
+  }
+
+  let sum = 0;
+  for (const p of payments) {
+    const amount = asNumber(p.amount);
+    const paymentDate = asDate(p.paymentDate);
+    if (amount == null || !paymentDate) continue;
+    sum += amount;
+    await prisma.paymentHistory.create({
+      data: {
+        gameId,
+        amount: decimalFrom(amount)!,
+        paymentDate: parseDateOnly(paymentDate)!,
+        paymentType: asPaymentType(p.paymentType),
+        notes: asString(p.notes),
+      },
+    });
+  }
+
+  if (sum > 0) {
+    const paid = decimalFrom(sum);
+    if (paid) {
+      await prisma.game.update({
+        where: { id: gameId },
+        data: { amountPaid: paid },
+      });
+    }
+  }
+}
+
 export async function importLibrary(
   userId: string,
   payload: unknown,
@@ -185,65 +253,99 @@ export async function importLibrary(
     }
 
     const releaseDate =
-      asDate(row.releaseDate) ?? (asDate(row.mainDate) && !row.earlyAccessDate ? asDate(row.mainDate) : null);
+      asDate(row.releaseDate) ??
+      (asDate(row.mainDate) && !row.earlyAccessDate ? asDate(row.mainDate) : null);
     const earlyAccessDate = asDate(row.earlyAccessDate);
-    const amountPaid = asNumber(row.amountPaid) ?? 0;
+    const amountPaidValue = asNumber(row.amountPaid);
+    const useEarly = asBool(row.useEarlyAccessAsMainDate);
 
-    const data: Prisma.GameUncheckedCreateInput = {
-      userId,
-      title,
-      rawgId: rawgIdInt ?? undefined,
-      coverUrl: asString(row.coverUrl),
-      releaseDate: parseDateOnly(releaseDate ?? undefined),
-      earlyAccessDate: parseDateOnly(earlyAccessDate ?? undefined),
-      interestStatus: asInterest(row.interestStatus),
-      purchaseStatus: asPurchase(row.purchaseStatus),
-      mediaFormat: asMedia(row.mediaFormat),
-      selectedPlatform: asString(row.selectedPlatform),
-      selectedEdition: asString(row.selectedEdition),
-      selectedStore: asString(row.selectedStore),
-      totalPrice: decimalFrom(asNumber(row.totalPrice)),
-      amountPaid: decimalFrom(amountPaid) ?? undefined,
-      targetPrice: decimalFrom(asNumber(row.targetPrice)),
-      notes: asString(row.notes),
-      purchaseUrl: asString(row.purchaseUrl),
-      useEarlyAccessAsMainDate: Boolean(row.useEarlyAccessAsMainDate),
-      dateSource: releaseDate || earlyAccessDate ? 'MANUAL' : 'UNKNOWN',
-    };
+    // Evitar choque unique(userId, rawgId) si otro juego ya lo tiene
+    let safeRawgId: number | undefined = rawgIdInt ?? undefined;
+    if (safeRawgId != null) {
+      const clash = await prisma.game.findFirst({
+        where: {
+          userId,
+          rawgId: safeRawgId,
+          ...(existing ? { NOT: { id: existing.id } } : {}),
+        },
+        select: { id: true },
+      });
+      if (clash) safeRawgId = undefined;
+    }
 
     try {
       if (existing) {
         await prisma.game.update({
           where: { id: existing.id },
           data: {
-            title: data.title,
-            rawgId: data.rawgId ?? existing.rawgId,
-            coverUrl: data.coverUrl ?? existing.coverUrl,
-            releaseDate: data.releaseDate ?? existing.releaseDate,
-            earlyAccessDate: data.earlyAccessDate ?? existing.earlyAccessDate,
-            interestStatus: data.interestStatus,
-            purchaseStatus: data.purchaseStatus,
-            mediaFormat: data.mediaFormat,
-            selectedPlatform: data.selectedPlatform ?? existing.selectedPlatform,
-            selectedEdition: data.selectedEdition ?? existing.selectedEdition,
-            selectedStore: data.selectedStore ?? existing.selectedStore,
-            totalPrice: data.totalPrice ?? existing.totalPrice,
-            amountPaid: data.amountPaid ?? existing.amountPaid,
-            targetPrice: data.targetPrice ?? existing.targetPrice,
-            notes: data.notes ?? existing.notes,
-            purchaseUrl: data.purchaseUrl ?? existing.purchaseUrl,
-            useEarlyAccessAsMainDate: data.useEarlyAccessAsMainDate,
+            // No pisar título si el match fue por rawgId y el export trae otro nombre
+            title: existing.rawgId && rawgIdInt && existing.rawgId === rawgIdInt
+              ? existing.title
+              : title,
+            rawgId: safeRawgId ?? existing.rawgId,
+            coverUrl: asString(row.coverUrl) ?? existing.coverUrl,
+            releaseDate: parseDateOnly(releaseDate ?? undefined) ?? existing.releaseDate,
+            earlyAccessDate:
+              earlyAccessDate !== null
+                ? parseDateOnly(earlyAccessDate ?? undefined)
+                : row.earlyAccessDate === null
+                  ? null
+                  : existing.earlyAccessDate,
+            interestStatus: asInterest(row.interestStatus),
+            purchaseStatus: asPurchase(row.purchaseStatus),
+            mediaFormat: asMedia(row.mediaFormat),
+            selectedPlatform: asString(row.selectedPlatform) ?? existing.selectedPlatform,
+            selectedEdition: asString(row.selectedEdition) ?? existing.selectedEdition,
+            selectedStore: asString(row.selectedStore) ?? existing.selectedStore,
+            totalPrice:
+              asNumber(row.totalPrice) != null
+                ? (decimalFrom(asNumber(row.totalPrice)) ?? undefined)
+                : undefined,
+            ...(amountPaidValue != null
+              ? { amountPaid: decimalFrom(amountPaidValue) ?? undefined }
+              : {}),
+            targetPrice:
+              asNumber(row.targetPrice) != null
+                ? (decimalFrom(asNumber(row.targetPrice)) ?? undefined)
+                : undefined,
+            notes: asString(row.notes) ?? existing.notes,
+            purchaseUrl: asString(row.purchaseUrl) ?? existing.purchaseUrl,
+            ...(useEarly !== undefined ? { useEarlyAccessAsMainDate: useEarly } : {}),
             dateSource:
-              data.releaseDate || data.earlyAccessDate
+              releaseDate || earlyAccessDate
                 ? existing.dateSource === 'OFFICIAL'
                   ? 'OFFICIAL'
                   : 'MANUAL'
                 : existing.dateSource,
           },
         });
+        await importPaymentsIfNeeded(existing.id, row.payments, true);
         result.updated += 1;
       } else {
-        await prisma.game.create({ data });
+        const created = await prisma.game.create({
+          data: {
+            userId,
+            title,
+            rawgId: safeRawgId,
+            coverUrl: asString(row.coverUrl),
+            releaseDate: parseDateOnly(releaseDate ?? undefined),
+            earlyAccessDate: parseDateOnly(earlyAccessDate ?? undefined),
+            interestStatus: asInterest(row.interestStatus),
+            purchaseStatus: asPurchase(row.purchaseStatus),
+            mediaFormat: asMedia(row.mediaFormat),
+            selectedPlatform: asString(row.selectedPlatform),
+            selectedEdition: asString(row.selectedEdition),
+            selectedStore: asString(row.selectedStore),
+            totalPrice: decimalFrom(asNumber(row.totalPrice)),
+            amountPaid: decimalFrom(amountPaidValue ?? 0) ?? undefined,
+            targetPrice: decimalFrom(asNumber(row.targetPrice)),
+            notes: asString(row.notes),
+            purchaseUrl: asString(row.purchaseUrl),
+            useEarlyAccessAsMainDate: useEarly ?? false,
+            dateSource: releaseDate || earlyAccessDate ? 'MANUAL' : 'UNKNOWN',
+          },
+        });
+        await importPaymentsIfNeeded(created.id, row.payments, false);
         result.created += 1;
       }
     } catch (err) {

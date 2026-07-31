@@ -37,6 +37,7 @@ export async function exportLibrary(userId: string) {
       targetPrice: g.targetPrice != null ? toNumber(g.targetPrice) : null,
       notes: g.notes,
       purchaseUrl: g.purchaseUrl,
+      useEarlyAccessAsMainDate: g.useEarlyAccessAsMainDate,
       lists: g.listItems.map((i) => i.list.name),
       offers: g.offers.map((o) => ({
         store: o.store,
