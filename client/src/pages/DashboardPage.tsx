@@ -70,7 +70,7 @@ export function DashboardPage() {
               Jugando y cola
             </h3>
             <p className="mt-1 text-sm text-ink-muted">
-              Puedes tener varios a la vez. Marca estado sin abrir la ficha.
+              Solo juegos ya salidos (o sin fecha). Los pendientes de lanzamiento no entran aquí.
             </p>
           </div>
           <span className="rounded-lg border border-white/10 bg-surface/40 px-2.5 py-1 text-xs text-ink-muted">
@@ -117,7 +117,8 @@ export function DashboardPage() {
             <h4 className="mb-2 text-sm font-medium text-focus">Siguiente a jugar</h4>
             {playBacklog.length === 0 ? (
               <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-ink-muted">
-                Nada pendiente. Cuando un juego esté en Pagado o Recibido, aparecerá aquí.
+                Nada pendiente de jugar. Los pagados que aún no han salido aparecen en reservas /
+                lanzamientos, no aquí.
               </p>
             ) : (
               <ul className="space-y-2">

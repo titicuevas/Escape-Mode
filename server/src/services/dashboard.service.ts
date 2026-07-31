@@ -91,8 +91,18 @@ export async function getDashboard(userId: string) {
     .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
     .map(serializeGame);
 
+  /** Solo juegos ya jugables: pagados/recibidos cuya fecha principal ya pasó (o no hay fecha). */
+  const isPlayableNow = (g: (typeof games)[number]) => {
+    const main = getMainDate(g);
+    if (!main) return true;
+    return startOfDayUTC(main).getTime() <= today.getTime();
+  };
+
   const backlogAll = games
-    .filter((g) => g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID')
+    .filter(
+      (g) =>
+        (g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID') && isPlayableNow(g),
+    )
     .sort((a, b) => {
       const ir = interestRank(a.interestStatus) - interestRank(b.interestStatus);
       if (ir !== 0) return ir;
