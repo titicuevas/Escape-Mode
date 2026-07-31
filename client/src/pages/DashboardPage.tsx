@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Compass, Heart, Plus, ShoppingBag, Wallet } from 'lucide-react';
+import { CalendarDays, Compass, Gamepad2, Heart, Plus, ShoppingBag, Wallet } from 'lucide-react';
 import { api } from '../api/client';
 import { PageSkeleton } from '../components/Skeleton';
 import { GameCard } from '../components/GameCard';
@@ -9,12 +9,23 @@ import { EmptyState } from '../components/EmptyState';
 import { CoverImage } from '../components/CoverImage';
 import { formatDateEs, formatEuro, interestLabel } from '../utils/format';
 import { useAuth } from '../providers/AuthProvider';
+import type { Game, PurchaseStatus } from '../types/game';
 
 export function DashboardPage() {
   const { user } = useAuth();
+  const queryClient = useQueryClient();
   const { data, isLoading, isError } = useQuery({
     queryKey: ['dashboard'],
     queryFn: () => api.getDashboard(),
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: ({ id, purchaseStatus }: { id: string; purchaseStatus: PurchaseStatus }) =>
+      api.updateGame(id, { purchaseStatus }),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      await queryClient.invalidateQueries({ queryKey: ['games'] });
+    },
   });
 
   if (isLoading) return <PageSkeleton />;
@@ -27,6 +38,8 @@ export function DashboardPage() {
   }
 
   const next = data.nextRelease?.game;
+  const nowPlaying = data.nowPlaying ?? [];
+  const playBacklog = data.playBacklog ?? [];
 
   return (
     <div className="space-y-7 md:space-y-9">
@@ -45,6 +58,85 @@ export function DashboardPage() {
           Añadir juego
         </Link>
       </header>
+
+      <section className="rounded-3xl border border-accent/20 bg-gradient-to-br from-accent/10 via-surface-elevated/40 to-focus/5 p-5 sm:p-6">
+        <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <p className="inline-flex items-center gap-2 text-xs uppercase tracking-[0.18em] text-accent">
+              <Gamepad2 className="size-3.5" aria-hidden />
+              Ahora mismo
+            </p>
+            <h3 className="mt-2 font-display text-xl font-semibold tracking-tight sm:text-2xl">
+              Jugando y cola
+            </h3>
+            <p className="mt-1 text-sm text-ink-muted">
+              Puedes tener varios a la vez. Marca estado sin abrir la ficha.
+            </p>
+          </div>
+          <span className="rounded-lg border border-white/10 bg-surface/40 px-2.5 py-1 text-xs text-ink-muted">
+            {data.playQueueCount ?? nowPlaying.length + playBacklog.length} en cola
+          </span>
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <div>
+            <h4 className="mb-2 text-sm font-medium text-accent">Jugando ahora</h4>
+            {nowPlaying.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-ink-muted">
+                Ninguno en marcha. Empieza uno desde la cola.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {nowPlaying.map((game) => (
+                  <PlayRow
+                    key={game.id}
+                    game={game}
+                    busy={statusMutation.isPending}
+                    actions={[
+                      {
+                        label: 'Terminado',
+                        onClick: () =>
+                          statusMutation.mutate({ id: game.id, purchaseStatus: 'COMPLETED' }),
+                      },
+                      {
+                        label: 'Pausar',
+                        onClick: () =>
+                          statusMutation.mutate({ id: game.id, purchaseStatus: 'RECEIVED' }),
+                      },
+                    ]}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <div>
+            <h4 className="mb-2 text-sm font-medium text-focus">Siguiente a jugar</h4>
+            {playBacklog.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-white/15 px-3 py-4 text-sm text-ink-muted">
+                Nada pendiente. Cuando un juego esté en Pagado o Recibido, aparecerá aquí.
+              </p>
+            ) : (
+              <ul className="space-y-2">
+                {playBacklog.map((game) => (
+                  <PlayRow
+                    key={game.id}
+                    game={game}
+                    busy={statusMutation.isPending}
+                    actions={[
+                      {
+                        label: 'Empezar',
+                        onClick: () =>
+                          statusMutation.mutate({ id: game.id, purchaseStatus: 'PLAYING' }),
+                      },
+                    ]}
+                  />
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
 
       {next ? (
         <section className="overflow-hidden rounded-3xl border border-white/10 bg-surface-elevated/50">
@@ -264,9 +356,7 @@ export function DashboardPage() {
             <h3 className="font-display text-xl font-semibold tracking-tight">
               Reservas y compras próximas
             </h3>
-            <p className="mt-1 text-xs text-ink-muted">
-              Ya reservados, pagados o en camino
-            </p>
+            <p className="mt-1 text-xs text-ink-muted">Ya reservados, pagados o en camino</p>
           </div>
           <Link to="/reservations" className="text-sm text-accent">
             Ver reservas
@@ -314,6 +404,40 @@ export function DashboardPage() {
         />
       </section>
     </div>
+  );
+}
+
+function PlayRow({
+  game,
+  busy,
+  actions,
+}: {
+  game: Game;
+  busy: boolean;
+  actions: Array<{ label: string; onClick: () => void }>;
+}) {
+  return (
+    <li className="flex items-center gap-2 rounded-xl border border-white/10 bg-surface/50 px-2 py-2">
+      <Link to={`/games/${game.id}`} className="flex min-w-0 flex-1 items-center gap-2.5">
+        <div className="h-12 w-9 shrink-0 overflow-hidden rounded-md">
+          <CoverImage src={game.coverUrl} title={game.title} alt="" />
+        </div>
+        <span className="truncate text-sm font-medium">{game.title}</span>
+      </Link>
+      <div className="flex shrink-0 flex-wrap justify-end gap-1">
+        {actions.map((action) => (
+          <button
+            key={action.label}
+            type="button"
+            disabled={busy}
+            className="min-h-9 rounded-lg border border-white/15 px-2 text-[11px] text-ink-muted hover:border-accent/40 hover:text-accent disabled:opacity-50"
+            onClick={action.onClick}
+          >
+            {action.label}
+          </button>
+        ))}
+      </div>
+    </li>
   );
 }
 

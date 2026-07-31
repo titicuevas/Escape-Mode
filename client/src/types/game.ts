@@ -104,4 +104,7 @@ export interface DashboardResponse {
   interestCounts: Record<InterestStatus, number>;
   pendingReviewCount: number;
   thinkingGames: Game[];
+  nowPlaying: Game[];
+  playBacklog: Game[];
+  playQueueCount: number;
 }

@@ -76,6 +76,34 @@ export async function getDashboard(userId: string) {
   const thinking = games.filter((g) => g.interestStatus === 'THINKING');
   const pendingReview = games.filter((g) => g.interestStatus === 'THINKING').length;
 
+  const interestRank = (status: string) => {
+    if (status === 'MUST_BUY') return 0;
+    if (status === 'INTERESTED') return 1;
+    if (status === 'THINKING') return 2;
+    return 3;
+  };
+
+  /** Varios a la vez: todos los que están en PLAYING. */
+  const nowPlaying = games
+    .filter((g) => g.purchaseStatus === 'PLAYING')
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime())
+    .map(serializeGame);
+
+  /** Cola: recibidos o pagados esperando empezar (sin estar jugando aún). */
+  const playBacklog = games
+    .filter((g) => g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID')
+    .sort((a, b) => {
+      const ir = interestRank(a.interestStatus) - interestRank(b.interestStatus);
+      if (ir !== 0) return ir;
+      return b.updatedAt.getTime() - a.updatedAt.getTime();
+    })
+    .slice(0, 12)
+    .map(serializeGame);
+
+  const playQueueCount =
+    games.filter((g) => g.purchaseStatus === 'PLAYING').length +
+    games.filter((g) => g.purchaseStatus === 'RECEIVED' || g.purchaseStatus === 'PAID').length;
+
   const interestCounts = {
     MUST_BUY: games.filter((g) => g.interestStatus === 'MUST_BUY').length,
     INTERESTED: games.filter((g) => g.interestStatus === 'INTERESTED').length,
@@ -169,5 +197,8 @@ export async function getDashboard(userId: string) {
     interestCounts,
     pendingReviewCount: pendingReview,
     thinkingGames: thinking.slice(0, 6).map(serializeGame),
+    nowPlaying,
+    playBacklog,
+    playQueueCount,
   };
 }
