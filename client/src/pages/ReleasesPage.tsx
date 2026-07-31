@@ -7,8 +7,31 @@ import { EmptyState } from '../components/EmptyState';
 import { PageSkeleton } from '../components/Skeleton';
 import {
   interestStatusLabels,
+  platformFamilyLabels,
   purchaseStatusLabels,
 } from '@grc/shared';
+
+const monthLabels = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+const yearOptions = (() => {
+  const current = new Date().getFullYear();
+  return [current - 1, current, current + 1, current + 2, current + 3];
+})();
+
+const platformOptions = Object.entries(platformFamilyLabels).filter(([key]) => key !== 'OTHER');
 
 export function ReleasesPage() {
   const [q, setQ] = useState('');
@@ -96,39 +119,55 @@ export function ReleasesPage() {
           <label htmlFor="platform" className="mb-1 block text-xs text-ink-muted">
             Plataforma
           </label>
-          <input
+          <select
             id="platform"
             value={platform}
             onChange={(e) => setPlatform(e.target.value)}
-            placeholder="PlayStation 5"
             className="touch-field w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm"
-          />
+          >
+            <option value="">Todas</option>
+            {platformOptions.map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="year" className="mb-1 block text-xs text-ink-muted">
             Año
           </label>
-          <input
+          <select
             id="year"
-            type="number"
             value={year}
             onChange={(e) => setYear(e.target.value)}
             className="touch-field w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm"
-          />
+          >
+            <option value="">Todos</option>
+            {yearOptions.map((y) => (
+              <option key={y} value={String(y)}>
+                {y}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="month" className="mb-1 block text-xs text-ink-muted">
             Mes
           </label>
-          <input
+          <select
             id="month"
-            type="number"
-            min={1}
-            max={12}
             value={month}
             onChange={(e) => setMonth(e.target.value)}
             className="touch-field w-full rounded-lg border border-white/10 bg-surface px-3 py-2 text-sm"
-          />
+          >
+            <option value="">Todos</option>
+            {monthLabels.map((label, i) => (
+              <option key={label} value={String(i + 1)}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label htmlFor="interest" className="mb-1 block text-xs text-ink-muted">

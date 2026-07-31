@@ -4,6 +4,7 @@ import {
   gameCreateSchema,
   interestStatusLabels,
   mediaFormatLabels,
+  platformFamilyLabels,
   purchaseStatusLabels,
   dateSourceLabels,
   STORE_OPTIONS,
@@ -23,6 +24,7 @@ const mediaFormatOptions = Object.entries(mediaFormatLabels) as Array<
 const dateSourceOptions = Object.entries(dateSourceLabels) as Array<
   [GameCreateInput['dateSource'], string]
 >;
+const platformSelectOptions = Object.values(platformFamilyLabels);
 
 function resolveStoreSelect(store: string | null | undefined): string {
   if (!store) return '';
@@ -193,12 +195,18 @@ export function GameForm({
           <label htmlFor="selectedPlatform" className="mb-1.5 block text-sm">
             Plataforma elegida
           </label>
-          <input
+          <select
             id="selectedPlatform"
             className="w-full rounded-lg border border-white/10 bg-surface px-3 py-2"
-            placeholder="PlayStation 5"
             {...register('selectedPlatform')}
-          />
+          >
+            <option value="">Sin especificar</option>
+            {platformSelectOptions.map((label) => (
+              <option key={label} value={label}>
+                {label}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

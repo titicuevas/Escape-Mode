@@ -1,4 +1,4 @@
-import type { Game, InterestStatus, Prisma, PurchaseStatus } from '@prisma/client';
+import type { Game, InterestStatus, PlatformFamily, Prisma, PurchaseStatus } from '@prisma/client';
 import { prisma } from '../config/prisma.js';
 import { AppError } from '../utils/errors.js';
 import { calculateRemainingAmount, decimalFrom, toNumber } from '../utils/money.js';
@@ -157,12 +157,34 @@ export function buildWhere(userId: string, query: GamesQueryInput): Prisma.GameW
   }
 
   if (query.platform) {
-    and.push({
-      OR: [
-        { selectedPlatform: { contains: query.platform, mode: 'insensitive' } },
-        { platforms: { has: query.platform } },
-      ],
-    });
+    const familyKeys = new Set([
+      'PLAYSTATION_5',
+      'XBOX_SERIES',
+      'NINTENDO_SWITCH',
+      'NINTENDO_SWITCH_2',
+      'PC',
+      'OTHER',
+    ]);
+    const family = familyKeys.has(query.platform)
+      ? (query.platform as PlatformFamily)
+      : null;
+    const labelByFamily: Record<string, string> = {
+      PLAYSTATION_5: 'PlayStation 5',
+      XBOX_SERIES: 'Xbox Series',
+      NINTENDO_SWITCH: 'Nintendo Switch',
+      NINTENDO_SWITCH_2: 'Nintendo Switch 2',
+      PC: 'PC',
+      OTHER: 'Otra',
+    };
+    const label = family ? labelByFamily[family]! : query.platform;
+    const or: Prisma.GameWhereInput[] = [
+      { selectedPlatform: { contains: label, mode: 'insensitive' } },
+      { platforms: { has: label } },
+    ];
+    if (family) {
+      or.push({ normalizedPlatforms: { has: family } });
+    }
+    and.push({ OR: or });
   }
 
   if (query.interestStatus) {
