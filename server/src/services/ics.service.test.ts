@@ -1,3 +1,4 @@
+import { describe, expect, it } from 'vitest';
 import { icsEscape, icsFold } from './ics.service.js';
 
 describe('ics helpers', () => {
